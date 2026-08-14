@@ -130,7 +130,6 @@ python-decouple==3.8
 python-dotenv==1.1.1
 python-json-logger==2.0.7
 pytz==2024.2
-pywinpty==2.0.14
 PyYAML==6.0.2
 pyzmq==26.2.0
 referencing==0.35.1
