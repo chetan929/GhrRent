@@ -7,7 +7,6 @@ import os
 from pathlib import Path
 
 from decouple import config
-import dj_database_url
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,7 +19,10 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 
 # Hosts
-ALLOWED_HOSTS = config("ALLOWED_HOSTS", default="localhost,127.0.0.1").split(",")
+ALLOWED_HOSTS = config(
+    "ALLOWED_HOSTS",
+    default="localhost,127.0.0.1,yourusername.pythonanywhere.com",
+).split(",")
 
 
 # Application definition
@@ -71,26 +73,15 @@ WSGI_APPLICATION = "gharrent.wsgi.application"
 
 # ==================================================
 # DATABASE
-# SQLite (Local Development) / PostgreSQL (Production)
+# SQLite for local development and PythonAnywhere
 # ==================================================
 
-# Check for DATABASE_URL (set by Heroku)
-if config("DATABASE_URL", default=None):
-    DATABASES = {
-        "default": dj_database_url.config(
-            default=config("DATABASE_URL"),
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
+DATABASES = {
+    "default": {
+        "ENGINE": "django.db.backends.sqlite3",
+        "NAME": BASE_DIR / "db.sqlite3",
     }
-else:
-    # Local development
-    DATABASES = {
-        "default": {
-            "ENGINE": "django.db.backends.sqlite3",
-            "NAME": BASE_DIR / "db.sqlite3",
-        }
-    }
+}
 
 
 # Password validation
@@ -202,15 +193,12 @@ MESSAGE_TAGS = {
 # ==================================================
 
 if not DEBUG:
-    # HTTPS
     SECURE_SSL_REDIRECT = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-
-    # HSTS
     SECURE_HSTS_SECONDS = 31536000
     SECURE_HSTS_INCLUDE_SUBDOMAINS = True
     SECURE_HSTS_PRELOAD = True
 
-    # Whitenoise
+    # Static files served through whitenoise on production hosts
     STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
