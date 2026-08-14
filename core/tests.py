@@ -182,3 +182,35 @@ class FreeReminderAndComplaintTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(UserProfile.objects.filter(user=user).exists())
+
+    def test_register_new_user_then_login_succeeds(self):
+        username = "brandnewuser_20260815"
+        email = "brandnewuser_20260815@example.com"
+        password = "securepass123"
+
+        response = self.client.post(
+            reverse("core:register"),
+            {
+                "username": username,
+                "email": email,
+                "password": password,
+                "password_confirm": password,
+            },
+        )
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(get_user_model().objects.filter(username=username).exists())
+        user = get_user_model().objects.get(username=username)
+        self.assertEqual(user.email.lower(), email.lower())
+        self.assertTrue(user.check_password(password))
+
+        self.client.logout()
+        login_response = self.client.post(
+            reverse("core:login"),
+            {"username": username, "password": password},
+            follow=True,
+        )
+
+        self.assertEqual(login_response.status_code, 200)
+        self.assertTrue(login_response.wsgi_request.user.is_authenticated)
+        self.assertRedirects(login_response, reverse("core:dashboard"))

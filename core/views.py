@@ -206,6 +206,9 @@ def register_view(request):
         password = request.POST.get("password", "").strip()
         password_confirm = request.POST.get("password_confirm", "").strip()
 
+        username = username.strip()
+        email = email.strip()
+
         # Validation
         if not all([username, email, password, password_confirm]):
             messages.error(request, "All fields are required.")
@@ -219,19 +222,23 @@ def register_view(request):
             messages.error(request, "Passwords do not match.")
             return render(request, "core/register.html")
 
-        if User.objects.filter(username=username).exists():
+        normalized_username = username
+        normalized_email = email.lower()
+
+        if User.objects.filter(username__iexact=normalized_username).exists():
             messages.error(request, "Username already taken.")
             return render(request, "core/register.html")
 
-        if User.objects.filter(email=email).exists():
+        if User.objects.filter(email__iexact=normalized_email).exists():
             messages.error(request, "Email already registered.")
             return render(request, "core/register.html")
 
-        # Create user
+        # Create the user with Django's secure hashed password API.
         user = User.objects.create_user(
-            username=username, email=email, password=password
+            username=normalized_username,
+            email=normalized_email,
+            password=password,
         )
-        user.save()
 
         # Send welcome email
         EmailReminderService.send_welcome_email(user.email, user.username)
@@ -239,7 +246,7 @@ def register_view(request):
         # Auto login after registration
         login(request, user)
         messages.success(
-            request, f"✅ Account created successfully! Welcome, {username}!"
+            request, f"✅ Account created successfully! Welcome, {user.username}!"
         )
         return redirect("core:dashboard")
 
