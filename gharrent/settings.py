@@ -19,11 +19,7 @@ DEBUG = config("DEBUG", default=False, cast=bool)
 
 
 # Hosts
-ALLOWED_HOSTS = config(
-    "ALLOWED_HOSTS",
-    default="localhost,127.0.0.1,yourusername.pythonanywhere.com",
-).split(",")
-
+ALLOWED_HOSTS = ["*"]
 
 # Application definition
 INSTALLED_APPS = [
