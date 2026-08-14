@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Notifications</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 40px;
+        background: #f5f7fb;
+        color: #1f2937;
+      }
+      .card {
+        max-width: 900px;
+        margin: 0 auto;
+        background: white;
+        border-radius: 14px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      }
+      .item {
+        padding: 14px 12px;
+        border-bottom: 1px solid #e5e7eb;
+      }
+      .title {
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+      .meta {
+        font-size: 12px;
+        color: #6b7280;
+      }
+      a {
+        color: #2563eb;
+        text-decoration: none;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <h2>Notifications</h2>
+      <a href="/">← Back to dashboard</a>
+      {% for item in notifications %}
+        <div class="item">
+          <div class="title">{{ item.title }}</div>
+          <div>{{ item.message }}</div>
+          <div class="meta">
+            {{ item.category }} · {{ item.created_at|date:'d M, Y H:i' }} ·{% if item.is_read %}
+              Read
+            {% else %}
+              Unread
+            {% endif %}
+          </div>
+        </div>
+      {% empty %}
+        <p>No notifications yet.</p>
+      {% endfor %}
+    </div>
+  </body>
+</html>

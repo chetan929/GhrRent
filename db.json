@@ -1,0 +1,62 @@
+{
+  "tenants": [
+    {
+      "name": "amit",
+      "phone": "8700562901",
+      "property": "Property",
+      "rent": 10000,
+      "pending": 2000,
+      "dueDay": 2,
+      "logs": [],
+      "payments": [],
+      "id": 1
+    },
+    {
+      "name": "amit",
+      "phone": "8700562901",
+      "property": "Property",
+      "rent": 10000,
+      "pending": 22,
+      "dueDay": 2,
+      "logs": [],
+      "payments": [],
+      "id": 2
+    },
+    {
+      "name": "Test Tenant",
+      "phone": "9999999999",
+      "rent": 5000,
+      "pending": 5000,
+      "property": "Demo",
+      "dueDay": 2,
+      "id": 3
+    }
+  ],
+  "payments": [
+    {
+      "id": 1,
+      "tenant_id": 2,
+      "amount": 12000,
+      "method": "Online Transfer",
+      "note": "Rent payment August",
+      "date": "2026-08-10T14:30:00"
+    },
+    {
+      "id": 2,
+      "tenant_id": 3,
+      "amount": 5500,
+      "method": "Manual",
+      "note": "Partial payment",
+      "date": "2026-08-08T10:15:00"
+    }
+  ],
+  "reminders": [
+    {
+      "id": 1,
+      "tenant_id": 1,
+      "message": "Reminder sent to Rahul Sharma for \u00e2\u201a\u00b910000",
+      "status": "Sent",
+      "date": "2026-08-13T09:00:00"
+    }
+  ]
+}

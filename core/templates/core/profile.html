@@ -1,0 +1,236 @@
+{% extends 'core/dashboard.html' %}
+
+{% block title %}
+  User Profile - GharRent
+{% endblock %}
+
+{% block content %}
+  <div class="profile-page">
+    <div class="profile-header">
+      <div class="profile-banner"></div>
+      <div class="profile-container">
+        <div class="profile-card">
+          {% if profile.profile_picture %}
+            <img src="{{ profile.profile_picture.url }}" alt="Profile Picture" class="profile-pic" />
+          {% else %}
+            <div class="profile-pic-placeholder">
+              <span class="initials">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>
+            </div>
+          {% endif %}
+
+          <div class="profile-info">
+            <h2>{{ user.first_name }} {{ user.last_name }}</h2>
+            <p class="username">@{{ user.username }}</p>
+            <p class="email">{{ user.email }}</p>
+
+            {% if profile.organization %}
+              <p class="organization">{{ profile.organization }}</p>
+            {% endif %}
+
+            {% if profile.bio %}
+              <p class="bio">{{ profile.bio }}</p>
+            {% endif %}
+
+            {% if profile.phone %}
+              <p class="phone">📱 {{ profile.phone }}</p>
+            {% endif %}
+          </div>
+
+          <div class="profile-actions">
+            <a href="{% url 'core:edit_profile' %}" class="btn btn-primary">Edit Profile</a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="profile-section">
+      <h3>Account Information</h3>
+      <div class="info-grid">
+        <div class="info-item">
+          <label>Full Name</label>
+          <p>{{ user.first_name }} {{ user.last_name|default:'N/A' }}</p>
+        </div>
+        <div class="info-item">
+          <label>Username</label>
+          <p>{{ user.username }}</p>
+        </div>
+        <div class="info-item">
+          <label>Email</label>
+          <p>{{ user.email }}</p>
+        </div>
+        <div class="info-item">
+          <label>Phone</label>
+          <p>{{ profile.phone|default:'Not provided' }}</p>
+        </div>
+        <div class="info-item">
+          <label>Organization</label>
+          <p>{{ profile.organization|default:'Not provided' }}</p>
+        </div>
+        <div class="info-item">
+          <label>Member Since</label>
+          <p>{{ user.date_joined|date:'d M Y' }}</p>
+        </div>
+      </div>
+    </div>
+
+    {% if profile.bio %}
+      <div class="profile-section">
+        <h3>About</h3>
+        <p>{{ profile.bio }}</p>
+      </div>
+    {% endif %}
+  </div>
+
+  <style>
+    .profile-page {
+      padding: 20px;
+    }
+    
+    .profile-header {
+      margin-bottom: 30px;
+    }
+    
+    .profile-banner {
+      height: 150px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      border-radius: 12px 12px 0 0;
+    }
+    
+    .profile-container {
+      position: relative;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+      overflow: hidden;
+    }
+    
+    .profile-card {
+      padding: 30px;
+      text-align: center;
+      margin-top: -50px;
+      position: relative;
+    }
+    
+    .profile-pic {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      border: 4px solid white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      object-fit: cover;
+    }
+    
+    .profile-pic-placeholder {
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 auto;
+      border: 4px solid white;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    }
+    
+    .profile-pic-placeholder .initials {
+      color: white;
+      font-size: 48px;
+      font-weight: bold;
+    }
+    
+    .profile-info {
+      margin-top: 20px;
+    }
+    
+    .profile-info h2 {
+      color: #333;
+      margin-bottom: 5px;
+    }
+    
+    .profile-info .username {
+      color: #888;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    
+    .profile-info .email,
+    .profile-info .phone,
+    .profile-info .organization {
+      color: #555;
+      font-size: 14px;
+      margin: 5px 0;
+    }
+    
+    .profile-info .bio {
+      color: #666;
+      margin-top: 15px;
+      max-width: 500px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    
+    .profile-actions {
+      margin-top: 20px;
+    }
+    
+    .btn {
+      display: inline-block;
+      padding: 10px 20px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.3s;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(102, 126, 234, 0.3);
+    }
+    
+    .profile-section {
+      background: white;
+      border-radius: 12px;
+      padding: 30px;
+      margin-bottom: 20px;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    }
+    
+    .profile-section h3 {
+      color: #333;
+      margin-bottom: 20px;
+      font-size: 18px;
+    }
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 20px;
+    }
+    
+    .info-item {
+      padding: 15px;
+      background: #f8f9fa;
+      border-radius: 8px;
+    }
+    
+    .info-item label {
+      display: block;
+      color: #666;
+      font-size: 12px;
+      font-weight: 600;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+    
+    .info-item p {
+      color: #333;
+      font-size: 16px;
+    }
+  </style>
+{% endblock %}

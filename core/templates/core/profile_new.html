@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>User Profile - GharRent</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg: #f5f6fb;
+        --surface: #ffffff;
+        --surface-soft: #f9f8fc;
+        --ink: #1b1533;
+        --ink-soft: #69647f;
+        --ink-faint: #9691aa;
+        --border: #e9e7f3;
+        --indigo: #4f46e5;
+        --indigo-dark: #4338ca;
+      }
+      
+      body.dark {
+        --bg: #14101f;
+        --surface: #1c1830;
+        --surface-soft: #241f45;
+        --ink: #f1eefb;
+        --ink-soft: #b6afd4;
+        --ink-faint: #8a83ab;
+        --border: #2d2749;
+        --indigo: #8b7cf6;
+        --indigo-dark: #a599ff;
+      }
+      
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      body {
+        font-family: 'Sora', sans-serif;
+        background: var(--bg);
+        color: var(--ink);
+        transition: background 0.25s ease, color 0.25s ease;
+      }
+      .container {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 20px;
+      }
+      .header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+      }
+      .header h1 {
+        font-size: 24px;
+        font-weight: 700;
+      }
+      .btn-back {
+        background: var(--indigo);
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        text-decoration: none;
+        transition: all 0.25s ease;
+      }
+      .btn-back:hover {
+        background: var(--indigo-dark);
+      }
+      
+      .profile-card {
+        background: var(--surface);
+        border-radius: 16px;
+        padding: 30px;
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      }
+      .profile-header {
+        display: flex;
+        gap: 30px;
+        margin-bottom: 30px;
+        align-items: start;
+      }
+      .profile-pic {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+      .profile-pic-placeholder {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+      .profile-pic-placeholder .initials {
+        color: white;
+        font-size: 48px;
+        font-weight: 700;
+      }
+      
+      .profile-info h2 {
+        font-size: 28px;
+        margin-bottom: 5px;
+      }
+      .profile-info .email {
+        color: var(--ink-soft);
+        font-size: 14px;
+      }
+      .profile-info .bio {
+        color: var(--ink-soft);
+        margin: 10px 0;
+        line-height: 1.5;
+      }
+      
+      .actions {
+        margin-top: 20px;
+        display: flex;
+        gap: 10px;
+      }
+      .btn-edit {
+        display: inline-block;
+        background: #4f46e5;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 8px;
+        cursor: pointer;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      .btn-edit:hover {
+        background: #4338ca;
+      }
+      
+      .info-section {
+        margin-top: 40px;
+      }
+      .info-section h3 {
+        font-size: 18px;
+        font-weight: 600;
+        margin-bottom: 20px;
+      }
+      .info-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+      }
+      .info-item {
+        background: var(--surface-soft);
+        padding: 15px;
+        border-radius: 10px;
+      }
+      .info-item label {
+        display: block;
+        color: var(--ink-soft);
+        font-size: 12px;
+        margin-bottom: 5px;
+      }
+      .info-item p {
+        font-weight: 600;
+        font-size: 14px;
+        color: var(--ink);
+      }
+      
+      .empty {
+        color: var(--ink-faint);
+        font-style: italic;
+      }
+      
+      @media (max-width: 600px) {
+        .info-grid {
+          grid-template-columns: 1fr;
+        }
+        .profile-header {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>👤 My Profile</h1>
+        <a href="/" class="btn-back">← Dashboard</a>
+      </div>
+
+      <div class="profile-card">
+        <div class="profile-header">
+          {% if profile.profile_picture %}
+            <img src="{{ profile.profile_picture.url }}" alt="Profile" class="profile-pic" />
+          {% else %}
+            <div class="profile-pic-placeholder">
+              <span class="initials">{{ user.first_name|first|upper }}{{ user.last_name|first|upper }}</span>
+            </div>
+          {% endif %}
+
+          <div class="profile-info">
+            <h2>{{ user.first_name }} {{ user.last_name }}</h2>
+            <p class="email">{{ user.email }}</p>
+            {% if profile.phone %}
+              <p>
+                <strong>📱 Phone:</strong> {{ profile.phone }}
+              </p>
+            {% endif %}
+            {% if profile.organization %}
+              <p>
+                <strong>🏢 Organization:</strong> {{ profile.organization }}
+              </p>
+            {% endif %}
+            {% if profile.bio %}
+              <p class="bio">{{ profile.bio }}</p>
+            {% endif %}
+
+            <div class="actions">
+              <a href="/profile/edit/" class="btn-edit">✏️ Edit Profile</a>
+            </div>
+          </div>
+        </div>
+
+        <div class="info-section">
+          <h3>Account Information</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Username</label>
+              <p>{{ user.username }}</p>
+            </div>
+            <div class="info-item">
+              <label>Email Address</label>
+              <p>{{ user.email }}</p>
+            </div>
+            <div class="info-item">
+              <label>Phone</label>
+              <p>{{ profile.phone|default:'Not provided' }}</p>
+            </div>
+            <div class="info-item">
+              <label>Organization</label>
+              <p>{{ profile.organization|default:'Not provided' }}</p>
+            </div>
+            <div class="info-item">
+              <label>Member Since</label>
+              <p>{{ user.date_joined|date:'M d, Y' }}</p>
+            </div>
+            <div class="info-item">
+              <label>Last Login</label>
+              <p>{{ user.last_login|date:'M d, Y - H:i'|default:'Never' }}</p>
+            </div>
+          </div>
+        </div>
+
+        {% if profile.bio %}
+          <div class="info-section">
+            <h3>Bio</h3>
+            <div style="background: var(--surface-soft); padding: 20px; border-radius: 10px; line-height: 1.6; color: var(--ink);">{{ profile.bio }}</div>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <script>
+      // ── THEME DETECTION ──
+      function applyTheme(theme) {
+        if (theme === 'dark') {
+          document.body.classList.add('dark')
+        } else {
+          document.body.classList.remove('dark')
+        }
+      }
+      
+      // Load saved theme preference on page load
+      try {
+        const savedTheme = localStorage.getItem('rentease-theme') || 'light'
+        applyTheme(savedTheme)
+      } catch (err) {
+        applyTheme('light')
+      }
+      
+      // Listen for theme changes from other tabs/windows
+      window.addEventListener('storage', (e) => {
+        if (e.key === 'rentease-theme' && e.newValue) {
+          applyTheme(e.newValue)
+        }
+      })
+    </script>
+  </body>
+</html>

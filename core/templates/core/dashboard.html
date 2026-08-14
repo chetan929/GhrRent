@@ -1,0 +1,1507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="csrf-token" content="{{ csrf_token }}" />
+    <title>RentEase — Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet" />
+    <style>
+        :root {
+            --bg: #f5f6fb;
+            --surface: #ffffff;
+            --ink: #1b1533;
+            --ink-soft: #69647f;
+            --ink-faint: #9691aa;
+            --border: #e9e7f3;
+            --border-soft: #f1eff9;
+            --indigo: #4f46e5;
+            --indigo-dark: #4338ca;
+            --indigo-050: #eeedfd;
+            --indigo-100: #e0defb;
+            --grad: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%);
+            --success: #149e5a;
+            --success-bg: #e9f9f1;
+            --warning: #c2760c;
+            --warning-bg: #fff6e6;
+            --danger: #dc3545;
+            --danger-bg: #fdedee;
+            --radius-lg: 18px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+            --shadow-sm: 0 1px 2px rgba(27, 21, 51, 0.04);
+            --shadow-md: 0 8px 24px -8px rgba(46, 31, 102, 0.12);
+            --shadow-lg: 0 20px 45px -12px rgba(46, 31, 102, 0.18);
+        }
+
+        body.dark {
+            --bg: #14101f;
+            --surface: #1c1830;
+            --ink: #f1eefb;
+            --ink-soft: #b6afd4;
+            --ink-faint: #8a83ab;
+            --border: #2d2749;
+            --border-soft: #241f3d;
+            --indigo: #8b7cf6;
+            --indigo-dark: #a599ff;
+            --indigo-050: #241f45;
+            --indigo-100: #322b5c;
+            --grad: linear-gradient(135deg, #6d5bff 0%, #9b6bff 100%);
+            --success: #3ddc8a;
+            --success-bg: #123423;
+            --warning: #f0a941;
+            --warning-bg: #3a2a10;
+            --danger: #ff6b7a;
+            --danger-bg: #3a1620;
+            --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+            --shadow-md: 0 8px 24px -8px rgba(0, 0, 0, 0.5);
+            --shadow-lg: 0 20px 45px -12px rgba(0, 0, 0, 0.6);
+        }
+        body.dark .content::before { opacity: 0.28; }
+        body.dark .detail-reminder-content { background: #16301f; color: var(--ink); }
+        body.dark .search, body.dark .icon-btn { background: var(--bg); }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg); color: var(--ink); font-family: 'Inter', sans-serif; font-size: 14px; transition: background 0.25s ease, color 0.25s ease; }
+        .sidebar, .topbar, .stat-card, .panel, .modal-box, .detail-panel, .search, .icon-btn, .form-group input, .form-group select { transition: background 0.25s ease, border-color 0.25s ease, color 0.25s ease; }
+        h1, h2, h3 { font-family: 'Sora', sans-serif; }
+
+        .app { display: grid; grid-template-columns: 240px 1fr; min-height: 100vh; }
+
+        /* Sidebar */
+        .sidebar { background: linear-gradient(180deg, #1f1a3e 0%, #2a1e50 55%, #321d58 100%); color: #edebfb; padding: 24px 16px 20px; display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; z-index: 40; }
+        .brand { display: flex; align-items: center; gap: 10px; padding: 4px 10px 26px; }
+        .brand-mark { width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(135deg, #8b7cf6, #6d5bff); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .brand-mark svg { width: 18px; height: 18px; }
+        .brand-name { font-weight: 700; font-size: 18px; color: #fff; }
+        .brand-sub { font-size: 11px; color: #b6ade0; }
+        .nav-section-label { font-size: 10.5px; text-transform: uppercase; color: #8f86c2; font-weight: 600; margin: 18px 12px 8px; }
+        .nav { display: flex; flex-direction: column; gap: 2px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 10px; color: #c9c2ed; font-size: 13px; font-weight: 500; text-decoration: none; transition: all 0.3s ease; cursor: pointer; }
+        .nav-item svg { width: 18px; height: 18px; flex-shrink: 0; transition: transform 0.3s ease; }
+        .nav-item:hover { background: rgba(255, 255, 255, 0.06); color: #fff; transform: translateX(4px); }
+        .nav-item:hover svg { transform: scale(1.1); }
+        .nav-item.active { background: linear-gradient(135deg, rgba(139, 124, 246, 0.35), rgba(109, 91, 255, 0.22)); color: #fff; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08); animation: slideIn 0.4s ease; }
+        .nav-badge { margin-left: auto; font-size: 10.5px; font-weight: 700; background: #ff6b57; color: #fff; padding: 1px 7px; border-radius: 20px; }
+        .sidebar-footer { margin-top: auto; padding: 14px 12px; border-radius: 14px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); }
+        .sidebar-footer p { font-size: 11px; color: #b6ade0; line-height: 1.5; }
+        .sidebar-footer strong { color: #fff; font-size: 12px; }
+
+        /* Topbar */
+        .topbar { height: 68px; background: var(--surface); border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; gap: 16px; position: sticky; top: 0; z-index: 20; }
+        .hamburger-btn { display: none; background: none; border: none; cursor: pointer; padding: 6px; align-items: center; justify-content: center; }
+        .hamburger-btn svg { width: 20px; height: 20px; stroke: var(--ink); }
+        .search { flex: 1; max-width: 380px; display: flex; align-items: center; gap: 9px; background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 8px 14px; }
+        .search svg { width: 16px; height: 16px; flex-shrink: 0; color: var(--ink-faint); }
+        .search input { border: none; background: none; outline: none; font-size: 13px; width: 100%; color: var(--ink); }
+        .search input::placeholder { color: var(--ink-faint); }
+        .search kbd { font-size: 10.5px; color: var(--ink-faint); border: 1px solid var(--border); border-radius: 5px; padding: 1px 6px; flex-shrink: 0; }
+        .topbar-right { margin-left: auto; display: flex; align-items: center; gap: 16px; }
+        .icon-btn { width: 36px; height: 36px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; cursor: pointer; flex-shrink: 0; }
+        .icon-btn svg { width: 18px; height: 18px; color: var(--ink-soft); }
+        .icon-btn:hover { background: var(--border); }
+        .profile-chip { display: flex; align-items: center; gap: 10px; padding-left: 16px; border-left: 1px solid var(--border); }
+        .avatar { width: 36px; height: 36px; border-radius: 10px; background: var(--grad); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; flex-shrink: 0; }
+        .avatar[style*="background-image"] { background-size: cover !important; background-position: center !important; }
+        .profile-meta .name { font-size: 13px; font-weight: 600; }
+        .profile-meta .role { font-size: 11px; color: var(--ink-faint); }
+
+        /* Content */
+        .content { padding: 24px 24px 50px; position: relative; overflow: hidden; }
+        .content::before { content: ''; position: fixed; top: 50%; left: 50%; transform: translate(-50%, calc(-50% + var(--wm-shift, 0px))); width: 720px; height: 720px; pointer-events: none; z-index: 0; background-image: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%236d5bff' d='M12 2.6 2.4 10.9c-.6.5-.2 1.5.6 1.5H5v8.1c0 .6.5 1 1 1h4.5v-6.4c0-.6.5-1 1-1h1c.6 0 1 .4 1 1v6.4H18c.6 0 1-.4 1-1V12.4h2c.8 0 1.2-1 .6-1.5L12 2.6Z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-size: contain; opacity: 0.16; transition: transform 0.05s linear; }
+        .content > * { position: relative; z-index: 1; }
+        .page-head { display: flex; justify-content: space-between; margin-bottom: 20px; flex-wrap: wrap; gap: 16px; }
+        .page-head h1 { font-size: 22px; font-weight: 700; }
+        .page-head p { color: var(--ink-soft); font-size: 13px; }
+        .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { display: flex; align-items: center; gap: 8px; padding: 9px 16px; border-radius: 10px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; background: none; }
+        .btn svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .btn-primary { background: var(--grad); color: #fff; box-shadow: 0 10px 20px -8px rgba(79, 70, 229, 0.55); }
+        .btn-primary svg { stroke: #fff; }
+        .btn-secondary { background: var(--surface); color: var(--ink); border: 1px solid var(--border); }
+        .btn-outline-purple { background: var(--indigo-050); color: var(--indigo-dark); border: 1px solid var(--indigo-100); pointer-events: auto !important; cursor: pointer !important; }
+        .btn-outline-purple svg { stroke: var(--indigo-dark); }
+        .btn-outline-purple:disabled { pointer-events: none !important; cursor: not-allowed !important; opacity: 0.6; }
+        .btn-sm { padding: 6px 12px; font-size: 11.5px; }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn:hover { opacity: 0.9; }
+
+        /* Stats */
+        .summary-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 20px; }
+        .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; }
+        .stat-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+        .stat-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; }
+        .stat-trend { font-size: 11px; font-weight: 700; padding: 3px 9px; border-radius: 20px; display: inline-flex; align-items: center; line-height: 1.3; white-space: nowrap; }
+        .trend-up { background: var(--success-bg); color: var(--success); }
+        .trend-down { background: var(--danger-bg); color: var(--danger); }
+        .trend-flat { background: var(--warning-bg); color: var(--warning); }
+        .stat-value { font-family: 'Sora', sans-serif; font-size: 24px; font-weight: 700; }
+        .stat-label { font-size: 12px; color: var(--ink-soft); margin-top: 3px; font-weight: 500; }
+        .c1 .stat-icon { background: var(--indigo-050); color: var(--indigo); }
+        .c2 .stat-icon { background: var(--success-bg); color: var(--success); }
+        .c3 .stat-icon { background: var(--warning-bg); color: var(--warning); }
+        .c4 .stat-icon { background: var(--danger-bg); color: var(--danger); }
+
+        /* Layout */
+        .layout { display: grid; grid-template-columns: 1.7fr 1fr; gap: 18px; align-items: start; }
+        .stack { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+        .panel-head { display: flex; justify-content: space-between; padding: 16px 20px 12px; border-bottom: 1px solid var(--border-soft); flex-wrap: wrap; gap: 8px; }
+        .panel-head h3 { font-size: 15px; font-weight: 700; }
+        .panel-head .sub { font-size: 11px; color: var(--ink-faint); }
+        .link-btn { font-size: 12px; font-weight: 600; color: var(--indigo); display: flex; align-items: center; gap: 4px; cursor: pointer; background: none; border: none; }
+        .panel-body { padding: 6px 20px 18px; }
+        .panel-body.tight { padding: 0; }
+
+        /* Table */
+        .due-table { width: 100%; border-collapse: collapse; }
+        .due-table th { text-align: left; font-size: 10.5px; text-transform: uppercase; color: var(--ink-faint); font-weight: 600; padding: 10px 10px; border-bottom: 1px solid var(--border-soft); }
+        .due-table td { padding: 12px 10px; border-bottom: 1px solid var(--border-soft); vertical-align: middle; }
+        .tenant-cell { display: flex; align-items: center; gap: 10px; }
+        .tenant-avatar { width: 34px; height: 34px; border-radius: 9px; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0; }
+        .tenant-name { font-weight: 600; font-size: 13px; }
+        .tenant-property { font-size: 11px; color: var(--ink-faint); }
+        .amt { font-family: 'IBM Plex Mono', monospace; font-weight: 600; font-size: 12.5px; }
+        .due-date { font-size: 12px; color: var(--ink-soft); }
+        .due-date.urgent { color: var(--danger); font-weight: 600; }
+        .badge { font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 20px; display: inline-flex; align-items: center; gap: 5px; }
+        .badge::before { content: ''; width: 6px; height: 6px; border-radius: 50%; }
+        .badge-paid { background: var(--success-bg); color: var(--success); }
+        .badge-paid::before { background: var(--success); }
+        .badge-pending { background: var(--warning-bg); color: var(--warning); }
+        .badge-pending::before { background: var(--warning); }
+        .badge-overdue { background: var(--danger-bg); color: var(--danger); }
+        .badge-overdue::before { background: var(--danger); }
+
+        .row-actions { display: flex; gap: 6px; }
+        .mini-btn { width: 30px; height: 30px; border-radius: 8px; display: flex; align-items: center; justify-content: center; border: 1px solid var(--border); background: var(--surface); color: var(--ink-soft); cursor: pointer; }
+        .mini-btn.wa { color: #149e5a; border-color: #cfeedb; background: #f1fbf6; }
+        .mini-btn:hover { background: var(--indigo-050); border-color: var(--indigo); color: var(--indigo); }
+        .delete-btn { color: var(--danger); border-color: #fdd5d9; background: #fdedee; }
+        .delete-btn:hover { background: var(--danger); color: #fff; }
+
+        /* Modals */
+        .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(19, 14, 41, 0.6); backdrop-filter: blur(6px); z-index: 1000; justify-content: center; align-items: center; padding: 20px; }
+        .modal-overlay.active { display: flex; }
+        .modal-box { background: var(--surface); color: var(--ink); border-radius: var(--radius-lg); max-width: 520px; width: 100%; padding: 28px 32px; box-shadow: var(--shadow-lg); max-height: 90vh; overflow-y: auto; }
+        .modal-box h2 { color: var(--ink); font-size: 22px; margin-bottom: 6px; }
+        .modal-box .sub { color: var(--ink-soft); font-size: 14px; margin-bottom: 20px; }
+        .form-group { margin-bottom: 16px; display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { font-size: 13px; font-weight: 600; color: var(--ink-soft); }
+        .form-group input, .form-group select { padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; background: var(--bg); color: var(--ink); outline: none; width: 100%; }
+        body.dark .form-group select { color-scheme: dark; }
+        .form-group input:focus, .form-group select:focus { border-color: var(--indigo); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12); background: var(--surface); }
+        .form-group .hint { font-size: 11px; color: var(--ink-faint); }
+        .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; }
+        .modal-actions .btn { flex: 1; justify-content: center; }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        /* Payment rows */
+        .payment-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-soft); }
+        .pay-icon { width: 36px; height: 36px; border-radius: 10px; background: var(--success-bg); color: var(--success); display: flex; align-items: center; justify-content: center; }
+        .pay-main { flex: 1; }
+        .pay-title { font-size: 13px; font-weight: 600; }
+        .pay-sub { font-size: 11px; color: var(--ink-faint); }
+        .pay-amt { text-align: right; }
+        .pay-amt .v { font-family: 'IBM Plex Mono', monospace; font-weight: 700; font-size: 13px; color: var(--success); }
+        .pay-amt .t { font-size: 10.5px; color: var(--ink-faint); }
+
+        /* Log */
+        .log-list { max-height: 280px; overflow-y: auto; display: flex; flex-direction: column; gap: 6px; }
+        .log-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: var(--bg); border-radius: 8px; border-left: 4px solid var(--border); font-size: 13px; }
+        .log-item .log-time { font-size: 11px; color: var(--ink-faint); white-space: nowrap; min-width: 60px; }
+        .log-item .log-msg { flex: 1; word-break: break-word; }
+        .log-item .log-status { font-size: 11px; font-weight: 600; white-space: nowrap; }
+        .log-status.success { color: var(--success); }
+        .log-status.fail { color: var(--danger); }
+        .border-success { border-left-color: var(--success); }
+        .border-danger { border-left-color: var(--danger); }
+        .empty-state { text-align: center; padding: 20px; color: var(--ink-faint); }
+        .footer-note { text-align: center; color: var(--ink-faint); font-size: 11px; padding: 20px 0 6px; }
+
+        .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; max-width: 420px; width: 100%; }
+        .toast { padding: 14px 20px; border-radius: 12px; color: #fff; font-weight: 500; font-size: 13px; box-shadow: 0 8px 30px rgba(0, 0, 0, 0.16); animation: slideIn 0.4s ease; display: flex; align-items: flex-start; gap: 12px; }
+        .toast.success { background: var(--success); }
+        .toast.error { background: var(--danger); }
+        .toast.info { background: var(--indigo); }
+        .toast.warning { background: var(--warning); }
+        .toast .toast-close { background: none; border: none; color: #fff; opacity: 0.7; font-size: 18px; cursor: pointer; padding: 0 4px; flex-shrink: 0; }
+        .toast .toast-close:hover { opacity: 1; }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Mobile Sidebar */
+        .sidebar-backdrop { display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.4); z-index: 39; opacity: 0; transition: opacity 0.3s ease; pointer-events: none; }
+        .sidebar-backdrop.active { display: block; opacity: 1; pointer-events: auto; }
+
+        /* Responsive */
+        @media (max-width: 1180px) { .layout { grid-template-columns: 1fr; } .summary-grid { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 900px) { .app { grid-template-columns: 1fr; } .sidebar { position: fixed; left: 0; top: 0; width: 260px; height: 100vh; transform: translateX(-100%); transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); z-index: 40; border-radius: 0; box-shadow: 4px 0 24px rgba(0, 0, 0, 0.2); } .sidebar.open { transform: translateX(0); } .sidebar-backdrop.active { display: block; opacity: 1; pointer-events: auto; } .hamburger-btn { display: flex; } .content { padding: 20px 16px; } }
+        @media (max-width: 640px) { .summary-grid { grid-template-columns: 1fr 1fr; gap: 10px; } .search { display: none; } .page-head { flex-direction: column; align-items: stretch; } .actions .btn { flex: 1; justify-content: center; } .due-table { min-width: 600px; } .panel-body.tight { overflow-x: auto; } .modal-box { padding: 20px; } }
+        @media (max-width: 400px) { .summary-grid { grid-template-columns: 1fr; } }
+
+        /* Detail Panel */
+        .detail-panel-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.3); z-index: 99; pointer-events: auto; }
+        .detail-panel { position: fixed; right: 0; top: 0; height: 100vh; width: 420px; background: var(--surface); box-shadow: -8px 0 24px rgba(27, 21, 51, 0.12); transform: translateX(100%); transition: transform 0.3s ease; z-index: 100; overflow-y: auto; }
+        .detail-panel.open { transform: translateX(0); }
+        .detail-panel-header { padding: 20px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+        .detail-panel-header h2 { font-size: 18px; font-weight: 700; margin: 0; }
+        .detail-close-btn { background: none; border: none; font-size: 24px; cursor: pointer; color: var(--ink-soft); }
+        .detail-panel-content { padding: 24px; }
+        .detail-section { margin-bottom: 24px; }
+        .detail-section-title { font-size: 12px; font-weight: 600; text-transform: uppercase; color: var(--ink-faint); margin-bottom: 12px; }
+        .detail-item { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border-soft); font-size: 13px; }
+        .detail-item:last-child { border-bottom: none; }
+        .detail-item-label { color: var(--ink-soft); display: flex; align-items: center; gap: 8px; }
+        .detail-item-value { font-weight: 600; color: var(--ink); }
+        .detail-payable-box { background: linear-gradient(135deg, #2a1e50, #3d2560); color: #fff; border-radius: var(--radius-lg); padding: 20px; margin-bottom: 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        .detail-payable-item { text-align: center; }
+        .detail-payable-label { font-size: 10px; text-transform: uppercase; color: rgba(255, 255, 255, 0.7); margin-bottom: 4px; letter-spacing: 0.5px; }
+        .detail-payable-value { font-size: 20px; font-weight: 700; font-family: 'IBM Plex Mono', monospace; }
+        .detail-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .detail-actions .btn { padding: 10px 14px; font-size: 12px; }
+        .detail-reminder-box { background: var(--bg); border-radius: var(--radius-md); padding: 16px; border: 1px solid var(--border); margin-bottom: 24px; }
+        .detail-reminder-header { font-size: 12px; font-weight: 600; color: var(--ink-soft); margin-bottom: 12px; }
+        .detail-reminder-content { background: #e8f5e9; border-radius: 8px; padding: 12px; border-left: 4px solid var(--success); font-size: 12px; line-height: 1.5; color: var(--ink); }
+        .detail-activity { display: flex; flex-direction: column; gap: 10px; }
+        .detail-activity-item { display: flex; align-items: flex-start; gap: 10px; padding: 10px; background: var(--bg); border-radius: 8px; font-size: 12px; }
+        .detail-activity-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success); margin-top: 3px; flex-shrink: 0; }
+        .detail-activity-text { flex: 1; }
+        .detail-activity-name { font-weight: 600; color: var(--ink); }
+        .detail-activity-time { font-size: 11px; color: var(--ink-faint); }
+        .detail-item-name { font-weight: 700; font-size: 15px; }
+        @media (max-width: 640px) { .detail-panel { width: 100%; } }
+    </style>
+</head>
+<body>
+    <div class="app">
+
+        <!-- SIDEBAR BACKDROP (mobile only) -->
+        <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+        <!-- SIDEBAR -->
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="brand-mark">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                        <path d="M3 11.5L12 4l9 7.5" stroke="#fff" stroke-width="2" />
+                        <path d="M5.5 10v9a1 1 0 0 0 1 1H10v-5.5a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V20h3.5a1 1 0 0 0 1-1v-9" stroke="#fff" stroke-width="2" />
+                    </svg>
+                </div>
+                <div>
+                    <div class="brand-name">RentEase</div>
+                    <div class="brand-sub">Property Manager</div>
+                </div>
+            </div>
+            <div class="nav-section-label">Main</div>
+            <nav class="nav">
+                <a class="nav-item active" href="#">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="3" y="3" width="7" height="9" rx="1.5" />
+                        <rect x="14" y="3" width="7" height="5" rx="1.5" />
+                        <rect x="14" y="12" width="7" height="9" rx="1.5" />
+                        <rect x="3" y="16" width="7" height="5" rx="1.5" />
+                    </svg>Dashboard
+                </a>
+                <a class="nav-item" href="#" onclick="event.preventDefault(); showTenantsPanel();">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>Tenants
+                </a>
+                <a class="nav-item" href="#" onclick="event.preventDefault(); showRemindersPanel();">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="9" />
+                        <path d="M12 7v5l3.5 2" />
+                    </svg>Reminders {% if logs_count %}<span class="nav-badge">{{ logs_count }}</span>{% endif %}
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <strong>⚡ Auto-Reminder</strong>
+                <p>Messages sent 2 days before due date with rent + pending.</p>
+            </div>
+        </aside>
+
+        <!-- MAIN -->
+        <div class="main">
+            <header class="topbar">
+                <button class="hamburger-btn" id="sidebarToggle">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M4 6h16" />
+                        <path d="M4 12h16" />
+                        <path d="M4 18h16" />
+                    </svg>
+                </button>
+                <div class="search">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="7" />
+                        <path d="m21 21-4.3-4.3" />
+                    </svg>
+                    <input type="text" id="searchInput" placeholder="Search tenants…" />
+                    <kbd>⌘K</kbd>
+                </div>
+                <div class="topbar-right">
+                    <button class="icon-btn" id="themeToggleBtn" title="Toggle dark / light mode">
+                        <svg id="themeIconMoon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+                        </svg>
+                        <svg id="themeIconSun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="display:none;">
+                            <circle cx="12" cy="12" r="4.5" />
+                            <path d="M12 2.5v2.5M12 19v2.5M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2.5 12H5M19 12h2.5M4.2 19.8 6 18M18 6l1.8-1.8" />
+                        </svg>
+                    </button>
+                    <button class="icon-btn" id="refreshBtn">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9h-4m-9 9a9 9 0 0 1-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18v4m-9-9a9 9 0 0 0 9-9m-9 9h4" />
+                        </svg>
+                    </button>
+                    <a href="{% url 'core:user_profile' %}" class="profile-chip" style="text-decoration: none; cursor: pointer;">
+                        <div class="avatar" style="{% if user.profile.profile_picture %}background-image: url('{{ user.profile.profile_picture.url }}'); background-size: cover; background-position: center; color: transparent;{% else %}background: var(--grad);{% endif %}">
+                            {% if not user.profile.profile_picture %}{{ user.first_name|first|default:user.username|first|upper }}{% endif %}
+                        </div>
+                        <div class="profile-meta">
+                            <div class="name">{{ user.first_name|default:user.username|title }}</div>
+                            <div class="role">{{ user.email }}</div>
+                        </div>
+                    </a>
+                    <a href="{% url 'core:logout' %}" class="icon-btn" title="Logout">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+                        </svg>
+                    </a>
+                </div>
+            </header>
+
+            <div class="content">
+                <div class="page-head">
+                    <div>
+                        <h1 id="greeting">Good morning 👋</h1>
+                        <p id="dateSub">13 August 2026</p>
+                    </div>
+                    <div class="actions">
+                        <label style="display:flex;align-items:center;gap:8px;background:var(--surface);padding:8px 12px;border-radius:10px;border:1px solid var(--border);font-size:12px;color:var(--ink-soft);">
+                            <span>Language</span>
+                            <select id="reminderLanguageSelect" style="border:none;background:transparent;color:var(--ink);font:inherit;outline:none;cursor:pointer;">
+                                <option value="english">English</option>
+                                <option value="hindi">हिंदी</option>
+                            </select>
+                        </label>
+                        <button class="btn btn-secondary" id="recordPaymentBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <rect x="2.5" y="5.5" width="19" height="13" rx="2" />
+                                <path d="M2.5 10h19" />
+                            </svg>Record Payment
+                        </button>
+                        <button class="btn btn-outline-purple" id="sendAllRemindersBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" />
+                            </svg>Send All
+                        </button>
+                        <button class="btn btn-outline-purple" onclick="openTenantDetails(1)">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <circle cx="12" cy="12" r="10" />
+                                <path d="M12 16v-4" />
+                                <path d="M12 8h.01" />
+                            </svg>View Details
+                        </button>
+                        <button class="btn btn-primary" id="openAddTenantBtn">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M19 8v6M22 11h-6" />
+                            </svg>Add Tenant
+                        </button>
+                    </div>
+                </div>
+
+                <!-- STATS -->
+                <div class="summary-grid" id="statsContainer">
+                    <!-- Stats are rendered dynamically via JS -->
+                </div>
+
+                <!-- LAYOUT -->
+                <div class="layout">
+                    <!-- LEFT -->
+                    <div class="stack">
+                        <div class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h3>All Tenants</h3><div class="sub" id="tenantCount">0 tenants</div>
+                                </div>
+                                <button class="link-btn" onclick="location.reload()">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="m9 18 6-6-6-6" />
+                                    </svg>View all
+                                </button>
+                            </div>
+                            <div class="panel-body tight">
+                                <div style="overflow-x:auto;">
+                                    <table class="due-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Tenant</th>
+                                                <th>Rent</th>
+                                                <th>Pending</th>
+                                                <th>Total</th>
+                                                <th>Due Date</th>
+                                                <th>Status</th>
+                                                <th></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tenantTableBody">
+                                            <!-- Tenants rendered dynamically via JS -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h3>Recent Payments</h3><div class="sub">Latest transactions</div>
+                                </div>
+                            </div>
+                            <div class="panel-body" id="recentPaymentsBody">
+                                <!-- Payments rendered dynamically via JS -->
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- RIGHT -->
+                    <div class="stack">
+                        <div class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h3>📨 Auto-Reminder</h3><div class="sub">2‑day‑before check</div>
+                                </div>
+                                <button class="link-btn" id="runReminderCheck">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M21 12a9 9 0 0 1-9 9m9-9a9 9 0 0 0-9-9m9 9h-4m-9 9a9 9 0 0 1-9-9m9 9c1.66 0 3-4.03 3-9s-1.34-9-3-9m0 18v4m-9-9a9 9 0 0 0 9-9m-9 9h4" />
+                                    </svg>Check Now
+                                </button>
+                            </div>
+                            <div class="panel-body">
+                                <div id="reminderQueue" style="margin-bottom:12px;">
+                                    <!-- Counts rendered dynamically via JS -->
+                                </div>
+                                <div id="reminderQueueList">
+                                    <!-- Queue rendered dynamically via JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="panel">
+                            <div class="panel-head">
+                                <div>
+                                    <h3>📜 Reminder Log</h3><div class="sub">Recent activity</div>
+                                </div>
+                                <button class="link-btn" id="clearLogBtn">
+                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                        <path d="M3 6h18" />
+                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" />
+                                        <path d="M8 4V2h8v2" />
+                                    </svg>Clear
+                                </button>
+                            </div>
+                            <div class="panel-body">
+                                <div class="log-list" id="logList">
+                                    <!-- Logs rendered dynamically via JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div style="background:var(--indigo-050);border-radius:var(--radius-lg);padding:16px 20px;border:1px solid var(--indigo-100);">
+                            <div style="display:flex;align-items:center;gap:10px;">
+                                <span style="font-size:20px;">💡</span>
+                                <div>
+                                    <div style="font-weight:600;font-size:13px;color:var(--indigo-dark);">Auto‑reminder active</div>
+                                    <div style="font-size:12px;color:var(--ink-soft);">Messages sent 2 days before due date with rent + pending.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="footer-note">RentEase · Auto‑reminders sent 2 days before due date with total payable (rent + pending).</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: ADD TENANT -->
+    <div class="modal-overlay" id="addTenantModal">
+        <div class="modal-box">
+            <h2>➕ Add Tenant</h2>
+            <div class="sub">Enter details to start auto‑reminders.</div>
+            <form id="addTenantForm">
+                <div class="form-group">
+                    <label>Full Name *</label><input type="text" id="addName" placeholder="John Smith" required />
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Email *</label><input type="email" id="addEmail" placeholder="tenant@example.com" required />
+                    </div>
+                    <div class="form-group">
+                        <label>Monthly Rent (₹) *</label><input type="number" id="addRent" placeholder="10000" required />
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Due Day *</label><input type="number" id="addDueDay" placeholder="5" min="1" max="31" required /><span class="hint">e.g. 5 = 5th of every month</span>
+                    </div>
+                    <div class="form-group">
+                        <label>Pending Amount (₹)</label><input type="number" id="addPending" placeholder="0" value="0" min="0" /><span class="hint">Previous outstanding</span>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Property (optional)</label><input type="text" id="addProperty" placeholder="Sunrise Apts · 302" />
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="closeModalBtn">Cancel</button>
+                    <button type="submit" class="btn btn-primary">✅ Add Tenant</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIRM -->
+    <div class="modal-overlay" id="confirmModal">
+        <div class="modal-box" style="max-width:400px; text-align:center; padding:32px 28px;">
+            <div id="confirmIcon" style="width:64px;height:64px;border-radius:18px;background:var(--danger-bg);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:28px;">🗑️</div>
+            <h2 id="confirmTitle" style="font-size:19px;margin-bottom:8px;">Are you sure?</h2>
+            <div class="sub" id="confirmMessage" style="margin-bottom:0;">This action cannot be undone.</div>
+            <div class="modal-actions" style="margin-top:24px;">
+                <button type="button" class="btn btn-secondary" id="confirmCancelBtn">Cancel</button>
+                <button type="button" class="btn" id="confirmOkBtn" style="background:var(--danger); color:#fff; justify-content:center;">Confirm</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: SELECT LANGUAGE FOR REMINDER -->
+    <div class="modal-overlay" id="languageSelectModal">
+        <div class="modal-box" style="max-width:400px; text-align:center; padding:32px 28px;">
+            <div style="width:64px;height:64px;border-radius:18px;background:var(--indigo-050);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:28px;">📧</div>
+            <h2 style="font-size:19px;margin-bottom:8px;">Select Language</h2>
+            <div class="sub" style="margin-bottom:0;">Choose language for the reminder email.</div>
+            <div class="modal-actions" style="margin-top:24px;flex-direction:column;gap:12px;">
+                <button type="button" class="btn btn-primary" id="sendReminderEnglishBtn" style="justify-content:center;width:100%;">🇬🇧 English</button>
+                <button type="button" class="btn btn-outline-purple" id="sendReminderHindiBtn" style="justify-content:center;width:100%;">🇮🇳 हिंदी</button>
+                <button type="button" class="btn btn-secondary" id="closeLangSelectBtn" style="justify-content:center;width:100%;margin-top:8px;">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: COMING SOON -->
+    <div class="modal-overlay" id="comingSoonModal">
+        <div class="modal-box" style="max-width:400px; text-align:center; padding:32px 28px;">
+            <div id="comingSoonIcon" style="width:64px;height:64px;border-radius:18px;background:var(--indigo-050);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;font-size:28px;">👥</div>
+            <h2 id="comingSoonTitle" style="font-size:19px;margin-bottom:8px;">Tenants Panel</h2>
+            <div class="sub" id="comingSoonSub" style="margin-bottom:0;">This section is coming soon — stay tuned!</div>
+            <div id="comingSoonExtra" style="margin-top:16px;"></div>
+            <div class="modal-actions" style="margin-top:24px;">
+                <button type="button" class="btn btn-primary" id="closeComingSoonBtn" style="justify-content:center;">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: RECORD PAYMENT -->
+    <div class="modal-overlay" id="paymentModal">
+        <div class="modal-box">
+            <h2>💰 Record Payment</h2>
+            <div class="sub">Mark a tenant's rent as paid.</div>
+            <form id="paymentForm">
+                <div class="form-group">
+                    <label>Select Tenant *</label>
+                    <select id="payTenantSelect" required>
+                        <option value="">— Select —</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Amount Paid (₹)</label>
+                    <input type="number" id="payAmount" placeholder="Full amount" step="1" />
+                    <span class="hint">Leave empty to pay full (rent + pending).</span>
+                </div>
+                <div class="form-group">
+                    <label>Method</label>
+                    <input type="text" id="payMethod" placeholder="UPI / Cash / Bank Transfer" value="Manual" />
+                </div>
+                <div class="form-group">
+                    <label>Note (optional)</label>
+                    <input type="text" id="payNote" placeholder="Any reference" />
+                </div>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-secondary" id="closePaymentBtn">Cancel</button>
+                    <button type="submit" class="btn btn-success">✅ Mark Paid</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- TENANT DETAILS SIDE PANEL -->
+    <div class="detail-panel-overlay" id="detailsOverlay"></div>
+    <div class="detail-panel" id="detailPanel">
+        <div class="detail-panel-header">
+            <h2>Tenant Details</h2>
+            <button class="detail-close-btn" id="closeDetailPanel">✕</button>
+        </div>
+        <div class="detail-panel-content" id="detailPanelContent">
+            <!-- Rendered dynamically via JS -->
+        </div>
+    </div>
+
+    <!-- TOAST CONTAINER -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Inject Tenants Data from Django -->
+    {{ tenants_json_data|json_script:"tenantsData" }}
+    {{ logs_json_data|json_script:"logsData" }}
+
+    <script>
+        // Django-powered GharRent Dashboard
+        (function() {
+            'use strict';
+
+            // ── BACKEND API URL ──
+            const API_URL_TENANTS = '/api/tenants';
+            const API_URL_ADD_TENANT = '/api/tenants/add/';
+
+            // ── LOCAL DATA STATE ──
+            let tenantData = [];
+            let currentTenantId = null;
+            let pendingConfirmAction = null;
+
+            // ── HELPER FUNCTIONS ──
+            function isMobile() { return window.innerWidth <= 900; }
+
+            function getTodayDay() { return new Date().getDate(); }
+
+            function getCSRFToken() {
+                return document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+            }
+
+            function getStatus(tenant) {
+                if (tenant.pending <= 0) return 'paid';
+                if (tenant.dueDay < getTodayDay()) return 'overdue';
+                return 'pending';
+            }
+
+            function getStatusBadge(status) {
+                if (status === 'paid') return '<span class="badge badge-paid">Paid</span>';
+                if (status === 'overdue') return '<span class="badge badge-overdue">Overdue</span>';
+                return '<span class="badge badge-pending">Pending</span>';
+            }
+
+            function formatCurrency(val) { return '₹' + val.toLocaleString(); }
+
+            function formatDueDate(dueDay) {
+                const now = new Date();
+                const year = now.getFullYear();
+                const month = now.getMonth();
+                const maxDayInMonth = new Date(year, month + 1, 0).getDate();
+                const safeDay = Math.min(Math.max(Number(dueDay) || 1, 1), maxDayInMonth);
+                const dueDate = new Date(year, month, safeDay);
+                return `${dueDate.getDate()} ${dueDate.toLocaleString('en-US', { month: 'short' })} ${dueDate.getFullYear()}`;
+            }
+
+            // ── DOM REFS ──
+            const sidebar = document.getElementById('sidebar');
+            const backdrop = document.getElementById('sidebarBackdrop');
+            const toggleBtn = document.getElementById('sidebarToggle');
+
+            // ── SIDEBAR LOGIC ──
+            toggleBtn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                if (sidebar.classList.contains('open')) { closeSidebar(); } else { openSidebar(); }
+            });
+            backdrop.addEventListener('click', closeSidebar);
+            document.addEventListener('click', function(e) {
+                if (!isMobile() || !sidebar.classList.contains('open')) return;
+                if (!sidebar.contains(e.target) && !toggleBtn.contains(e.target) && !e.target.closest('.modal-overlay') && !e
+                    .target.closest('.detail-panel') && !e.target.closest('.detail-panel-overlay')) {
+                    closeSidebar();
+                }
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape' && sidebar.classList.contains('open')) closeSidebar();
+            });
+            window.addEventListener('resize', function() {
+                if (!isMobile() && sidebar.classList.contains('open')) closeSidebar();
+            });
+
+            function openSidebar() { sidebar.classList.add('open');
+                backdrop.classList.add('active');
+                document.body.style.overflow = 'hidden'; }
+
+            function closeSidebar() { sidebar.classList.remove('open');
+                backdrop.classList.remove('active');
+                document.body.style.overflow = ''; }
+
+            // ── RENDER FUNCTIONS ──
+            function renderStats() {
+                const total = tenantData.length;
+                const collected = tenantData.filter(t => getStatus(t) === 'paid').reduce((sum, t) => sum + t.rent, 0);
+                const pendingTenants = tenantData.filter(t => getStatus(t) !== 'paid');
+                const pendingAmt = pendingTenants.reduce((sum, t) => sum + t.rent + t.pending, 0);
+                const outstanding = pendingTenants.reduce((sum, t) => sum + t.pending, 0);
+
+                document.getElementById('statsContainer').innerHTML = `
+                    <div class="stat-card c1"><div class="stat-top"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><span class="stat-trend trend-up">+${total}</span></div><div class="stat-value">${total}</div><div class="stat-label">Total Tenants</div></div>
+                    <div class="stat-card c2"><div class="stat-top"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 3h10c1 0 2 .5 2 1.5v2c0 .5-.5 1-1 1H7"/><path d="M7 6h9c1 0 1.5.5 1.5 1.5v1c0 1-1 1.5-2 1.5H7"/><path d="M8 10v9c0 1 .5 2 1.5 2h4"/></svg></div><span class="stat-trend trend-up">${total > 0 ? Math.round((collected / (total * 10000)) * 100) : 0}%</span></div><div class="stat-value mono">${formatCurrency(collected)}</div><div class="stat-label">Monthly Collected</div></div>
+                    <div class="stat-card c3"><div class="stat-top"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/></svg></div><span class="stat-trend trend-flat">${pendingTenants.length} due</span></div><div class="stat-value mono">${formatCurrency(pendingAmt)}</div><div class="stat-label">Pending (This Month)</div></div>
+                    <div class="stat-card c4"><div class="stat-top"><div class="stat-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg></div><span class="stat-trend trend-down">${pendingTenants.filter(t => getStatus(t) === 'overdue').length}</span></div><div class="stat-value mono">${formatCurrency(outstanding)}</div><div class="stat-label">Total Outstanding</div></div>
+                `;
+                document.getElementById('tenantCount').textContent = total + ' tenants';
+            }
+
+            function renderTenants() {
+                const tbody = document.getElementById('tenantTableBody');
+                tbody.innerHTML = '';
+                const today = getTodayDay();
+                tenantData.forEach(t => {
+                    const status = getStatus(t);
+                    const total = t.rent + t.pending;
+                    const tr = document.createElement('tr');
+                    const colors = ['#7C6CF0,#4F46E5', '#F09E6C,#E27A3F', '#6CC9F0,#3F9DE2', '#7ED9A8,#2FAF6E'];
+                    const color = colors[t.id % colors.length] || colors[0];
+                    tr.innerHTML = `
+                        <td><div class="tenant-cell"><div class="tenant-avatar" style="background:linear-gradient(135deg,${color});">${t.name.split(' ').map(n=>n[0]).join('')}</div><div><div class="tenant-name">${t.name}</div><div class="tenant-property">${t.property}</div></div></div></td>
+                        <td><span class="amt">${formatCurrency(t.rent)}</span></td>
+                        <td><span class="amt" style="color:${t.pending < 0 ? 'var(--danger)' : 'var(--ink-soft)'};">${formatCurrency(Math.abs(t.pending))}</span></td>
+                        <td><span class="amt">${formatCurrency(total)}</span></td>
+                        <td><span class="due-date ${status === 'overdue' ? 'urgent' : ''}">${formatDueDate(t.dueDay)}</span></td>
+                        <td>${getStatusBadge(status)}</td>
+                        <td><div class="row-actions">
+                            <button class="mini-btn wa" onclick="window.showLanguageSelect(${t.id})" title="Send Reminder"><svg viewBox="0 0 24 24" fill="currentColor" style="width:14px;height:14px;"><path d="M12 2a10 10 0 0 0-8.6 15L2 22l5.2-1.4A10 10 0 1 0 12 2Z" /></svg></button>
+                            <button class="mini-btn" onclick="window.recordPayment(${t.id})" style="color:var(--success);border-color:#CFEEDB;background:#F1FBF6;" title="Record Payment"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" style="width:14px;height:14px;"><path d="M20 6 9 17l-5-5" /></svg></button>
+                            <button class="mini-btn delete-btn" onclick="window.deleteTenant(${t.id})" title="Delete"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:14px;height:14px;"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 4V2h8v2"/></svg></button>
+                        </div></td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+                if (tenantData.length === 0) {
+                    tbody.innerHTML =
+                        `<tr><td colspan="7" style="padding:20px;text-align:center;color:var(--ink-faint);">No tenants found. Add one above!</td></tr>`;
+                }
+            }
+
+            function renderPayments() {
+                const container = document.getElementById('recentPaymentsBody');
+                let allPayments = [];
+                tenantData.forEach(t => {
+                    t.payments.forEach(p => {
+                        allPayments.push({ ...p, tenant: t.name });
+                    });
+                });
+                allPayments.sort((a, b) => b.date.localeCompare(a.date));
+                const latest = allPayments.slice(0, 5);
+                container.innerHTML = '';
+                if (latest.length === 0) {
+                    container.innerHTML =
+                        '<div class="empty-state"><p style="font-size:12px;">No payments recorded yet.</p></div>';
+                    return;
+                }
+                latest.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'payment-row';
+                    div.innerHTML = `
+                        <div class="pay-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M20 6 9 17l-5-5" /></svg></div>
+                        <div class="pay-main"><div class="pay-title">${p.tenant}</div><div class="pay-sub">${p.method} · ${p.note || 'Rent'}</div></div>
+                        <div class="pay-amt"><div class="v">+${formatCurrency(p.amount)}</div><div class="t">${p.date}</div></div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+
+            function renderReminders() {
+                const today = getTodayDay();
+                const dueIn2 = tenantData.filter(t => getStatus(t) !== 'paid' && (t.dueDay - today === 2));
+                const overdue = tenantData.filter(t => getStatus(t) === 'overdue');
+                const paidThisMonth = tenantData.filter(t => getStatus(t) === 'paid');
+
+                document.getElementById('reminderQueue').innerHTML = `
+                    <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--border-soft);"><span>📋 Due in 2 days</span><span style="font-weight:700;color:var(--indigo);">${dueIn2.length}</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;color:var(--ink-soft);border-bottom:1px solid var(--border-soft);"><span>⏰ Overdue</span><span style="font-weight:700;color:var(--danger);">${overdue.length}</span></div>
+                    <div style="display:flex;justify-content:space-between;padding:6px 0;font-size:12px;color:var(--ink-soft);"><span>✅ Paid this month</span><span style="font-weight:700;color:var(--success);">${paidThisMonth.length}</span></div>
+                `;
+
+                const queueList = document.getElementById('reminderQueueList');
+                queueList.innerHTML = '';
+                const items = [...dueIn2, ...overdue].slice(0, 5);
+                items.forEach(t => {
+                    const total = t.rent + t.pending;
+                    const div = document.createElement('div');
+                    div.style.cssText =
+                        'display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--indigo-050);border-radius:8px;border-left:3px solid var(--indigo);margin-bottom:6px;';
+                    div.innerHTML = `
+                        <div><div style="font-weight:600;font-size:13px;">${t.name}</div><div style="font-size:11px;color:var(--ink-soft);">${getStatus(t) === 'overdue' ? '⏰ Overdue' : 'Due in 2 days'} · ${formatCurrency(total)}</div></div>
+                        <button class="btn btn-sm btn-primary" onclick="window.showLanguageSelect(${t.id})">Send Now</button>
+                    `;
+                    queueList.appendChild(div);
+                });
+                if (items.length === 0) {
+                    queueList.innerHTML =
+                        '<div class="empty-state" style="padding:10px 0;"><p style="font-size:12px;">All caught up! 🎉</p></div>';
+                }
+            }
+
+            function renderLogs() {
+                const list = document.getElementById('logList');
+                list.innerHTML = '';
+                
+                if (!remindersLogs || remindersLogs.length === 0) {
+                    list.innerHTML =
+                        '<div class="empty-state" style="padding:10px 0;"><p style="font-size:12px;color:var(--ink-faint);">No reminders sent yet.</p></div>';
+                    return;
+                }
+                
+                const latest = remindersLogs.slice().sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 10);
+                latest.forEach(l => {
+                    const div = document.createElement('div');
+                    const logStatus = l.status === 'Sent' ? 'success' : 'failure';
+                    div.className = `log-item border-${logStatus}`;
+                    const logDate = new Date(l.date);
+                    const timeStr = logDate.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                    div.innerHTML = `
+                        <span class="log-time">${timeStr}</span>
+                        <span class="log-msg">${l.message || 'Reminder sent'}</span>
+                        <span class="log-status ${logStatus}">${l.status}</span>
+                    `;
+                    list.appendChild(div);
+                });
+            }
+
+            function updatePaymentSelect() {
+                const sel = document.getElementById('payTenantSelect');
+                const currentVal = sel.value;
+                sel.innerHTML = '<option value="">— Select —</option>';
+                tenantData.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.id;
+                    opt.textContent = `${t.name} (${formatCurrency(t.rent + t.pending)})`;
+                    sel.appendChild(opt);
+                });
+                if (currentVal) sel.value = currentVal;
+            }
+
+            function renderAll() {
+                renderStats();
+                renderTenants();
+                renderPayments();
+                renderReminders();
+                renderLogs();
+                updatePaymentSelect();
+            }
+
+            // ── BACKEND API CALLS ──
+            
+            // 1. LOAD DATA FROM DJANGO CONTEXT
+            let remindersLogs = [];
+            
+            function loadTenants() {
+                try {
+                    const dataElement = document.getElementById('tenantsData');
+                    if (dataElement && dataElement.textContent) {
+                        tenantData = JSON.parse(dataElement.textContent);
+                    } else {
+                        tenantData = [];
+                    }
+                    
+                    // Load reminder logs from Django
+                    try {
+                        const logsElement = document.getElementById('logsData');
+                        if (logsElement && logsElement.textContent) {
+                            remindersLogs = JSON.parse(logsElement.textContent);
+                        } else {
+                            remindersLogs = [];
+                        }
+                    } catch (e) {
+                        console.warn("No logs data available");
+                        remindersLogs = [];
+                    }
+                    
+                    renderAll();
+                } catch (error) {
+                    console.error("Error loading tenants:", error);
+                    tenantData = [];
+                    renderAll();
+                }
+            }
+            
+            // For compatibility, keep fetchTenants pointing to loadTenants
+            const fetchTenants = loadTenants;
+
+            // 2. ADD TENANT (Using Django API)
+            document.getElementById('addTenantForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                
+                const newTenant = {
+                    name: document.getElementById('addName').value.trim(),
+                    phone: '',
+                    email: document.getElementById('addEmail').value.trim(),
+                    property: document.getElementById('addProperty').value.trim(),
+                    rent: parseFloat(document.getElementById('addRent').value),
+                    pending: parseFloat(document.getElementById('addPending').value) || 0,
+                    due_day: parseInt(document.getElementById('addDueDay').value)
+                };
+
+                try {
+                    // Send to Django API with CSRF token
+                    const response = await fetch(API_URL_ADD_TENANT, {
+                        method: 'POST',
+                        headers: { 
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        body: JSON.stringify(newTenant)
+                    });
+
+                    // Read response body only once, as text first
+                    const responseText = await response.text();
+                    
+                    let data;
+                    try {
+                        data = JSON.parse(responseText);
+                    } catch (parseErr) {
+                        console.error("JSON parse error:", parseErr, "Response:", responseText);
+                        throw new Error(`Server returned invalid response: ${responseText.substring(0, 80)}`);
+                    }
+                    
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'Failed to add tenant');
+                    }
+
+                    // Successfully added
+                    document.getElementById('addTenantModal').classList.remove('active');
+                    e.target.reset();
+                    showToast('✅ ' + data.message, 'success');
+                    // Reload page to see new tenant
+                    setTimeout(() => location.reload(), 500);
+                } catch (error) {
+                    console.error("Add Tenant Error:", error);
+                    showToast('❌ Error adding tenant: ' + error.message, 'error');
+                }
+            });
+
+            // 3. DELETE TENANT
+            window.deleteTenant = function(id) {
+                showConfirm({
+                    title: 'Delete tenant?',
+                    message: 'This will permanently remove this tenant and their history.',
+                    icon: '🗑️',
+                    confirmLabel: 'Delete'
+                }, async function() {
+                    try {
+                        const response = await fetch(`${API_URL_TENANTS}/${id}/delete/`, {
+                            method: 'DELETE',
+                            headers: { 'X-CSRFToken': getCSRFToken() }
+                        });
+
+                        const data = await response.json().catch(() => ({}));
+                        if (!response.ok || !data.success) {
+                            throw new Error(data.message || 'Failed to delete tenant');
+                        }
+
+                        tenantData = tenantData.filter(tenant => tenant.id !== id);
+                        renderAll();
+                        showToast('🗑️ Tenant deleted.', 'warning');
+                    } catch (error) {
+                        console.error('Delete Tenant Error:', error);
+                        showToast('❌ Error deleting tenant: ' + error.message, 'error');
+                    }
+                });
+            };
+
+            // 4. RECORD PAYMENT
+            document.getElementById('paymentForm').addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const id = parseInt(document.getElementById('payTenantSelect').value);
+                const tenant = tenantData.find(t => t.id === id);
+                if (!tenant) return;
+
+                let amount = parseFloat(document.getElementById('payAmount').value);
+                const method = document.getElementById('payMethod').value.trim() || 'Manual';
+                const note = document.getElementById('payNote').value.trim() || 'Rent payment';
+
+                if (isNaN(amount) || amount <= 0) amount = tenant.rent + tenant.pending;
+                const actualPaid = Math.min(amount, tenant.rent + tenant.pending);
+
+                // Prepare payload for backend
+                const payload = {
+                    tenant_id: id,
+                    amount: actualPaid,
+                    method: method,
+                    note: note
+                };
+
+                try {
+                    const response = await fetch('/api/payments/record/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRFToken': getCSRFToken()
+                        },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.message || 'Failed to record payment');
+                    }
+
+                    const tenantIndex = tenantData.findIndex(t => t.id === id);
+                    if (tenantIndex >= 0) {
+                        const currentTenant = tenantData[tenantIndex];
+                        const totalDue = Number(currentTenant.rent) + Number(currentTenant.pending || 0);
+                        currentTenant.pending = Number((actualPaid - totalDue).toFixed(2));
+                        currentTenant.paid = currentTenant.pending >= 0;
+                        currentTenant.payments = currentTenant.payments || [];
+                        currentTenant.payments.unshift({
+                            amount: actualPaid,
+                            date: new Date().toISOString(),
+                            method: method,
+                            note: note || 'Rent payment'
+                        });
+                    }
+
+                    document.getElementById('paymentModal').classList.remove('active');
+                    e.target.reset();
+                    renderAll();
+                    showToast(`💰 Payment of ${formatCurrency(actualPaid)} recorded!`, 'success');
+                } catch (err) {
+                    console.error('Record Payment Error:', err);
+                    showToast('❌ Error recording payment. Check backend connection.', 'error');
+                }
+            });
+
+            // 5. SEND INDIVIDUAL REMINDER
+            window.sendReminder = async function(id, language = document.getElementById('reminderLanguageSelect')?.value || 'english') {
+                const tenant = tenantData.find(t => t.id === id);
+                if (!tenant) return;
+                
+                try {
+                    const response = await fetch(`/send-reminder/${id}/?language=${encodeURIComponent(language)}`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast(`📨 Email reminder sent to ${tenant.name}!`, 'success');
+                    } else {
+                        showToast(`⚠️ ${result.message}`, 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error sending reminder:', error);
+                    showToast(`❌ Failed to send reminder: ${error.message}`, 'error');
+                }
+            };
+
+            // 6. SEND ALL REMINDERS
+            document.getElementById('sendAllRemindersBtn').addEventListener('click', async function() {
+                const today = getTodayDay();
+                const due = tenantData.filter(t => getStatus(t) !== 'paid' && (t.dueDay - today <= 2));
+                if (due.length === 0) { 
+                    showToast('No tenants due in the next 2 days.', 'info'); 
+                    return; 
+                }
+                
+                const language = document.getElementById('reminderLanguageSelect')?.value || 'english';
+                try {
+                    const response = await fetch(`/send-all-reminders/?language=${encodeURIComponent(language)}`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Requested-With': 'XMLHttpRequest',
+                            'Content-Type': 'application/json',
+                        }
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showToast(`📨 Sent reminders to ${due.length} tenants!`, 'success');
+                    } else {
+                        showToast(`⚠️ ${result.message}`, 'warning');
+                    }
+                } catch (error) {
+                    console.error('Error sending all reminders:', error);
+                    showToast(`❌ Failed to send reminders: ${error.message}`, 'error');
+                }
+            });
+
+            // 7. VIEW DETAILS
+            window.openTenantDetails = function(id) {
+                const tenant = tenantData.find(t => t.id === id);
+                if (!tenant) return;
+                currentTenantId = id;
+                const total = tenant.rent + tenant.pending;
+
+                const content = document.getElementById('detailPanelContent');
+                content.innerHTML = `
+                    <div class="detail-section">
+                        <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+                            <div class="avatar" style="width:48px;height:48px;font-size:16px;">${tenant.name.split(' ').map(n=>n[0]).join('')}</div>
+                            <div><div class="detail-item-name">${tenant.name}</div><div style="font-size:12px;color:var(--ink-faint);">Tenant ID: #${tenant.id}</div></div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Contact Information</div>
+                        <div class="detail-item"><div class="detail-item-label">📱 Mobile</div><div class="detail-item-value">+91 ${tenant.phone}</div></div>
+                        <div class="detail-item"><div class="detail-item-label">� SMS</div><div class="detail-item-value">+91 ${tenant.phone}</div></div>
+                        <div class="detail-item"><div class="detail-item-label">🏠 Property</div><div class="detail-item-value">${tenant.property}</div></div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">Rent Details</div>
+                        <div class="detail-item"><div class="detail-item-label">Monthly Rent</div><div class="detail-item-value">${formatCurrency(tenant.rent)}</div></div>
+                        <div class="detail-item"><div class="detail-item-label">Security Deposit</div><div class="detail-item-value">₹20,000</div></div>
+                        <div class="detail-item"><div class="detail-item-label">Previous Outstanding</div><div class="detail-item-value" style="color:${tenant.pending < 0 ? 'var(--danger)' : 'var(--ink-soft)'};">${formatCurrency(Math.abs(tenant.pending))}</div></div>
+                        <div class="detail-item"><div class="detail-item-label">Current Month Rent</div><div class="detail-item-value">${formatCurrency(tenant.rent)}</div></div>
+                        <div class="detail-item"><div class="detail-item-label">✅ Amount Paid</div><div class="detail-item-value" style="color:var(--success);">${formatCurrency(tenant.rent - Math.max(0, tenant.pending - 0) )}</div></div>
+                    </div>
+                    <div class="detail-payable-box">
+                        <div class="detail-payable-item"><div class="detail-payable-label">Total Payable</div><div class="detail-payable-value">${formatCurrency(total)}</div></div>
+                        <div class="detail-payable-item"><div class="detail-payable-label">Remaining Due</div><div class="detail-payable-value" style="color:${tenant.pending < 0 ? '#f87171' : '#4ade80'};">${formatCurrency(Math.abs(tenant.pending))}</div></div>
+                    </div>
+                    <div class="detail-actions">
+                        <button class="btn btn-secondary" id="detailRecordPaymentBtn" style="justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><rect x="2.5" y="5.5" width="19" height="13" rx="2" /><path d="M2.5 10h19" /></svg>Record Payment</button>
+                        <button class="btn btn-primary" id="detailSendReminderBtn" style="justify-content:center;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z" /></svg>Send Reminder</button>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">📨 Reminder Preview</div>
+                        <div class="detail-reminder-box">
+                            <div class="detail-reminder-header">To ${tenant.name} · +91 ${tenant.phone}</div>
+                            <div class="detail-reminder-content">
+                                Hello ${tenant.name}, your rent is ${formatCurrency(tenant.rent)}. Due date is ${formatDueDate(tenant.dueDay)}. Previous outstanding is ${formatCurrency(tenant.pending)}. Total payable amount is ${formatCurrency(total)}. Please make the payment on time. Thank you.<br /><br />Regards,<br />RentEase<br />Property Owner
+                            </div>
+                        </div>
+                    </div>
+                    <div class="detail-section">
+                        <div class="detail-section-title">📜 Recent Activity</div>
+                        <div class="detail-activity">
+                            ${tenant.logs.length === 0 && tenant.payments.length === 0 ? '<div style="font-size:12px;color:var(--ink-faint);">No recent activity.</div>' : 
+                            [...tenant.logs.slice(0, 3).map(l => `
+                                <div class="detail-activity-item"><div class="detail-activity-dot"></div><div class="detail-activity-text"><div class="detail-activity-name">${l.msg}</div><div class="detail-activity-time">${l.time}</div></div></div>
+                            `), ...tenant.payments.slice(0, 3).map(p => `
+                                <div class="detail-activity-item"><div class="detail-activity-dot"></div><div class="detail-activity-text"><div class="detail-activity-name">Payment Received</div><div class="detail-activity-time">${formatCurrency(p.amount)} · ${p.date}</div></div></div>
+                            `)].join('')}
+                        </div>
+                    </div>
+                `;
+                document.getElementById('detailPanel').classList.add('open');
+                document.getElementById('detailsOverlay').style.display = 'block';
+
+                document.getElementById('detailRecordPaymentBtn').addEventListener('click', function() {
+                    window.recordPayment(currentTenantId);
+                    closeDetailPanel();
+                });
+                document.getElementById('detailSendReminderBtn').addEventListener('click', function() {
+                    closeDetailPanel();
+                    window.showLanguageSelect(currentTenantId);
+                });
+                if (isMobile()) closeSidebar();
+            };
+
+            function closeDetailPanel() {
+                document.getElementById('detailPanel').classList.remove('open');
+                document.getElementById('detailsOverlay').style.display = 'none';
+            }
+            document.getElementById('closeDetailPanel').addEventListener('click', closeDetailPanel);
+            document.getElementById('detailsOverlay').addEventListener('click', function(e) {
+                if (e.target === this) closeDetailPanel();
+            });
+            document.addEventListener('keydown', function(e) {
+                if (e.key === 'Escape') {
+                    const panel = document.getElementById('detailPanel');
+                    if (panel.classList.contains('open')) closeDetailPanel();
+                }
+            });
+
+            // ── MODALS OPEN/CLOSE ──
+            document.getElementById('openAddTenantBtn').addEventListener('click', () => {
+                document.getElementById('addTenantModal').classList.add('active');
+                if (isMobile()) closeSidebar();
+            });
+            document.getElementById('closeModalBtn').addEventListener('click', () => {
+                document.getElementById('addTenantModal').classList.remove('active');
+            });
+            document.getElementById('addTenantModal').addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+
+            document.getElementById('recordPaymentBtn').addEventListener('click', () => {
+                updatePaymentSelect();
+                document.getElementById('paymentModal').classList.add('active');
+                if (isMobile()) closeSidebar();
+            });
+            document.getElementById('closePaymentBtn').addEventListener('click', () => {
+                document.getElementById('paymentModal').classList.remove('active');
+            });
+            document.getElementById('paymentModal').addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+
+            window.recordPayment = function(id) {
+                updatePaymentSelect();
+                document.getElementById('payTenantSelect').value = id;
+                document.getElementById('paymentModal').classList.add('active');
+                if (isMobile()) closeSidebar();
+            };
+
+            // ── CONFIRM MODAL ──
+            const confirmModal = document.getElementById('confirmModal');
+            document.getElementById('confirmOkBtn').addEventListener('click', function() {
+                confirmModal.classList.remove('active');
+                if (typeof pendingConfirmAction === 'function') { pendingConfirmAction(); }
+                pendingConfirmAction = null;
+            });
+            document.getElementById('confirmCancelBtn').addEventListener('click', function() {
+                confirmModal.classList.remove('active');
+                pendingConfirmAction = null;
+            });
+            confirmModal.addEventListener('click', function(e) {
+                if (e.target === this) { this.classList.remove('active');
+                    pendingConfirmAction = null; }
+            });
+
+            function showConfirm(opts, onConfirm) {
+                document.getElementById('confirmTitle').textContent = opts.title || 'Are you sure?';
+                document.getElementById('confirmMessage').textContent = opts.message || 'This action cannot be undone.';
+                document.getElementById('confirmIcon').textContent = opts.icon || '⚠️';
+                document.getElementById('confirmOkBtn').textContent = opts.confirmLabel || 'Confirm';
+                pendingConfirmAction = onConfirm;
+                confirmModal.classList.add('active');
+                if (isMobile()) closeSidebar();
+            }
+
+            // ── LANGUAGE SELECT MODAL FOR REMINDERS ──
+            let pendingReminderTenantId = null;
+            const languageSelectModal = document.getElementById('languageSelectModal');
+            
+            document.getElementById('sendReminderEnglishBtn').addEventListener('click', function() {
+                languageSelectModal.classList.remove('active');
+                if (pendingReminderTenantId !== null) {
+                    window.sendReminder(pendingReminderTenantId, 'english');
+                }
+                pendingReminderTenantId = null;
+            });
+            
+            document.getElementById('sendReminderHindiBtn').addEventListener('click', function() {
+                languageSelectModal.classList.remove('active');
+                if (pendingReminderTenantId !== null) {
+                    window.sendReminder(pendingReminderTenantId, 'hindi');
+                }
+                pendingReminderTenantId = null;
+            });
+            
+            document.getElementById('closeLangSelectBtn').addEventListener('click', function() {
+                languageSelectModal.classList.remove('active');
+                pendingReminderTenantId = null;
+            });
+            
+            languageSelectModal.addEventListener('click', function(e) {
+                if (e.target === this) {
+                    this.classList.remove('active');
+                    pendingReminderTenantId = null;
+                }
+            });
+
+            window.showLanguageSelect = function(tenantId) {
+                pendingReminderTenantId = tenantId;
+                languageSelectModal.classList.add('active');
+                if (isMobile()) closeSidebar();
+            }
+
+            // ── TENANTS PANEL ──
+            window.showTenantsPanel = function() {
+                let html = '<div style="display:flex;flex-direction:column;gap:12px;max-height:70vh;overflow-y:auto;">';
+                if (tenantData.length === 0) {
+                    html += '<div style="text-align:center;color:var(--ink-faint);padding:40px 20px;">No tenants added yet.</div>';
+                } else {
+                    tenantData.forEach(t => {
+                        const status = getStatus(t);
+                        const statusColor = status === 'paid' ? 'var(--success)' : status === 'overdue' ? 'var(--danger)' : 'var(--warning)';
+                        html += `
+                            <div style="border:1px solid var(--border);border-radius:12px;padding:14px;background:var(--bg);">
+                                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                                    <div style="font-weight:600;font-size:14px;">${t.name}</div>
+                                    <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;background:${statusColor}20;color:${statusColor};">●${status}</span>
+                                </div>
+                                <div style="font-size:12px;color:var(--ink-soft);margin-bottom:8px;">📱 ${t.phone} | 🏠 ${t.property}</div>
+                                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:12px;">
+                                    <div><span style="color:var(--ink-faint);">Rent:</span> <strong>${formatCurrency(t.rent)}</strong></div>
+                                    <div><span style="color:var(--ink-faint);">Pending:</span> <strong style="color:${t.pending < 0 ? 'var(--danger)' : 'var(--ink)'};">${formatCurrency(Math.abs(t.pending))}</strong></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                html += '</div>';
+                
+                const modal = document.getElementById('comingSoonModal');
+                document.getElementById('comingSoonTitle').textContent = '👥 Tenants Panel';
+                document.getElementById('comingSoonSub').textContent = `Total: ${tenantData.length} tenants`;
+                document.getElementById('comingSoonIcon').textContent = '👥';
+                document.getElementById('comingSoonExtra').innerHTML = html;
+                modal.classList.add('active');
+                if (isMobile()) closeSidebar();
+            };
+
+            // ── REMINDERS PANEL ──
+            window.showRemindersPanel = function() {
+                // Use actual logs from database instead of tenant logs
+                let reminderLogs = remindersLogs && Array.isArray(remindersLogs) ? [...remindersLogs] : [];
+                reminderLogs.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+                
+                let html = '<div style="display:flex;flex-direction:column;gap:10px;max-height:70vh;overflow-y:auto;">';
+                if (reminderLogs.length === 0) {
+                    html += '<div style="text-align:center;color:var(--ink-faint);padding:40px 20px;">No reminders sent yet.</div>';
+                } else {
+                    reminderLogs.slice(0, 20).forEach(log => {
+                        const date = log.date ? new Date(log.date).toLocaleString() : 'N/A';
+                        const isSuccess = log.status === 'Sent' || log.status === 'sent';
+                        const bgColor = isSuccess ? 'var(--success-bg)' : 'var(--danger-bg)';
+                        const textColor = isSuccess ? 'var(--success)' : 'var(--danger)';
+                        html += `
+                            <div style="border-left:4px solid ${textColor};background:${bgColor};border-radius:8px;padding:12px 14px;font-size:12px;">
+                                <div style="display:flex;justify-content:space-between;margin-bottom:4px;">
+                                    <strong style="color:${textColor};">● ${log.status}</strong>
+                                    <span style="color:var(--ink-faint);">${date}</span>
+                                </div>
+                                <div style="color:var(--ink);">${log.message}</div>
+                            </div>
+                        `;
+                    });
+                }
+                html += '</div>';
+                
+                const dueCount = tenantData.filter(t => getStatus(t) !== 'paid' && (t.dueDay - getTodayDay() === 2)).length;
+                const modal = document.getElementById('comingSoonModal');
+                document.getElementById('comingSoonTitle').textContent = '⏰ Reminders Panel';
+                document.getElementById('comingSoonSub').textContent = `Total: ${reminderLogs.length} reminder logs · ${dueCount} due in 2 days`;
+                document.getElementById('comingSoonIcon').textContent = '⏰';
+                document.getElementById('comingSoonExtra').innerHTML = html;
+                modal.classList.add('active');
+                if (isMobile()) closeSidebar();
+            };
+
+            // ── CLOSE MODAL HANDLERS ──
+            document.getElementById('closeComingSoonBtn').addEventListener('click', function() {
+                document.getElementById('comingSoonModal').classList.remove('active');
+            });
+            document.getElementById('comingSoonModal').addEventListener('click', function(e) {
+                if (e.target === this) this.classList.remove('active');
+            });
+
+            // ── CLEAR LOG ──
+            document.getElementById('clearLogBtn').addEventListener('click', function() {
+                showConfirm({
+                    title: 'Clear reminder log?',
+                    message: 'This only clears the log from view, it does not undo any sent reminders.',
+                    icon: '📜',
+                    confirmLabel: 'Clear'
+                }, async function() {
+                    for (let t of tenantData) {
+                        t.logs = [];
+                        await fetch(`${API_URL}/${t.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ logs: [] })
+                        });
+                    }
+                    await fetchTenants();
+                    showToast('🗑️ Logs cleared', 'info');
+                });
+            });
+
+            // ── REFRESH & SEARCH ──
+            document.getElementById('refreshBtn').addEventListener('click', () => location.reload());
+            document.getElementById('runReminderCheck').addEventListener('click', () => fetchTenants());
+
+            document.getElementById('searchInput').addEventListener('input', function() {
+                const search = this.value.toLowerCase();
+                const rows = document.querySelectorAll('#tenantTableBody tr');
+                rows.forEach(function(row) {
+                    const text = row.textContent.toLowerCase();
+                    row.style.display = text.includes(search) ? '' : 'none';
+                });
+            });
+
+            // ── TOAST ──
+            function showToast(message, type) {
+                type = type || 'info';
+                var container = document.getElementById('toastContainer');
+                var toast = document.createElement('div');
+                toast.className = 'toast ' + type;
+                toast.innerHTML =
+                    '<span>' + message + '</span><button class="toast-close" onclick="this.parentElement.remove()">&times;</button>';
+                container.appendChild(toast);
+                setTimeout(function() {
+                    if (toast.parentNode) toast.remove();
+                }, 4000);
+            }
+            window.showToast = showToast;
+
+            // ── THEME ──
+            var themeToggleBtn = document.getElementById('themeToggleBtn');
+            var moonIcon = document.getElementById('themeIconMoon');
+            var sunIcon = document.getElementById('themeIconSun');
+
+            function applyTheme(theme) {
+                if (theme === 'dark') {
+                    document.body.classList.add('dark');
+                    moonIcon.style.display = 'none';
+                    sunIcon.style.display = 'block';
+                } else {
+                    document.body.classList.remove('dark');
+                    moonIcon.style.display = 'block';
+                    sunIcon.style.display = 'none';
+                }
+            }
+            var savedTheme = 'light';
+            try { savedTheme = localStorage.getItem('rentease-theme') || 'light'; } catch (err) { savedTheme = 'light'; }
+            applyTheme(savedTheme);
+            themeToggleBtn.addEventListener('click', function() {
+                var next = document.body.classList.contains('dark') ? 'light' : 'dark';
+                applyTheme(next);
+                try { localStorage.setItem('rentease-theme', next); } catch (err) {}
+                showToast(next === 'dark' ? '🌙 Dark mode on' : '☀️ Light mode on', 'info');
+            });
+
+            // ── WATERMARK ──
+            window.addEventListener('scroll', function() {
+                var shift = Math.min(window.scrollY * 0.08, 60);
+                document.documentElement.style.setProperty('--wm-shift', shift + 'px');
+            }, { passive: true });
+
+            // ── GREETING ──
+            var hour = new Date().getHours();
+            var greet = 'Good morning';
+            if (hour >= 12 && hour < 17) greet = 'Good afternoon';
+            else if (hour >= 17) greet = 'Good evening';
+            document.getElementById('greeting').textContent = greet + ' 👋';
+
+            // ── KEYBOARD SHORTCUTS ──
+            document.addEventListener('keydown', function(e) {
+                if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+                    e.preventDefault();
+                    document.getElementById('searchInput').focus();
+                }
+                if (e.key === 'Escape') {
+                    document.getElementById('addTenantModal').classList.remove('active');
+                    document.getElementById('paymentModal').classList.remove('active');
+                    document.getElementById('comingSoonModal').classList.remove('active');
+                    document.getElementById('confirmModal').classList.remove('active');
+                }
+            });
+
+            // ── INIT ──
+            fetchTenants();
+
+        })();
+    </script>
+</body>
+</html>
