@@ -177,7 +177,7 @@ def login_view(request):
 
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
-        password = request.POST.get("password", "").strip()
+        password = request.POST.get("password", "")
 
         if not username or not password:
             messages.error(request, "Please enter both username and password.")
@@ -203,8 +203,8 @@ def register_view(request):
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         email = request.POST.get("email", "").strip()
-        password = request.POST.get("password", "").strip()
-        password_confirm = request.POST.get("password_confirm", "").strip()
+        password = request.POST.get("password", "")
+        password_confirm = request.POST.get("password_confirm", "")
 
         username = username.strip()
         email = email.strip()
