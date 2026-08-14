@@ -1,3 +1,5 @@
+from decimal import Decimal
+
 from django.db import models
 from django.utils import timezone
 from django.contrib.auth.models import User
@@ -11,7 +13,7 @@ class Tenant(models.Model):
     email = models.EmailField(max_length=200, blank=True, null=True)
     property = models.CharField(max_length=200, blank=True, null=True)
     rent = models.DecimalField(max_digits=10, decimal_places=2)
-    pending = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    pending = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal("0"))
     due_day = models.PositiveSmallIntegerField()  # 1–31
     paid = models.BooleanField(default=False)
     paid_month = models.CharField(max_length=7, blank=True, null=True)  # '2026-08'
@@ -51,7 +53,8 @@ class ReminderLog(models.Model):
     date = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        return f"{self.tenant.name} - {self.status} at {self.date.strftime('%H:%M')}"
+        tenant_name = self.tenant.name if self.tenant else "Unknown tenant"
+        return f"{tenant_name} - {self.status} at {self.date.strftime('%H:%M')}"
 
 
 class Notification(models.Model):
