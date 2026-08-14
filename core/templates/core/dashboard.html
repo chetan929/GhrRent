@@ -358,8 +358,8 @@
                         </svg>
                     </button>
                     <a href="{% url 'core:user_profile' %}" class="profile-chip" style="text-decoration: none; cursor: pointer;">
-                        <div class="avatar" style="{% if user.profile.profile_picture %}background-image: url('{{ user.profile.profile_picture.url }}'); background-size: cover; background-position: center; color: transparent;{% else %}background: var(--grad);{% endif %}">
-                            {% if not user.profile.profile_picture %}{{ user.first_name|first|default:user.username|first|upper }}{% endif %}
+                        <div class="avatar" style="{% if profile.profile_picture %}background-image: url('{{ profile.profile_picture.url }}'); background-size: cover; background-position: center; color: transparent;{% else %}background: var(--grad);{% endif %}">
+                            {% if not profile.profile_picture %}{{ user.first_name|first|default:user.username|first|upper }}{% endif %}
                         </div>
                         <div class="profile-meta">
                             <div class="name">{{ user.first_name|default:user.username|title }}</div>

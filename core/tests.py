@@ -4,7 +4,7 @@ from django.urls import reverse
 import json
 
 from core.email_service import EmailReminderService
-from core.models import MaintenanceComplaint, Notification, Tenant
+from core.models import MaintenanceComplaint, Notification, Tenant, UserProfile
 
 
 class FreeReminderAndComplaintTests(TestCase):
@@ -168,3 +168,17 @@ class FreeReminderAndComplaintTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Tenant.objects.filter(id=tenant.id).exists())
+
+    def test_dashboard_handles_missing_user_profile(self):
+        user = get_user_model().objects.create_user(
+            username="profileless",
+            email="profileless@example.com",
+            password="pass123",
+        )
+        UserProfile.objects.filter(user=user).delete()
+        self.client.force_login(user)
+
+        response = self.client.get(reverse("core:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(UserProfile.objects.filter(user=user).exists())

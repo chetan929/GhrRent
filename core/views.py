@@ -16,6 +16,7 @@ from .models import (
     Notification,
     MaintenanceComplaint,
     UserProfile,
+    ensure_user_profile,
 )
 from .forms import TenantForm, PaymentForm
 from .email_service import EmailReminderService
@@ -255,6 +256,7 @@ def logout_view(request):
 @login_required(login_url="core:login")
 def dashboard(request):
     now = timezone.now()
+    profile = ensure_user_profile(request.user)
     tenants = Tenant.objects.all().order_by("name")
     notifications = Notification.objects.order_by("-created_at")[:5]
     maintenance_complaints = MaintenanceComplaint.objects.order_by("-created_at")[:5]
@@ -344,6 +346,7 @@ def dashboard(request):
         "maintenance_complaints": maintenance_complaints,
         "due_tenants": due_tenants,
         "due_tenants_count": due_tenants_count,
+        "profile": profile,
         "now": now,
     }
     return render(request, "core/dashboard.html", context)
@@ -681,7 +684,7 @@ def delete_tenant(request, tenant_id):
 def user_profile(request):
     """Display user profile with their data."""
     user = request.user
-    profile = user.profile
+    profile = ensure_user_profile(user)
 
     context = {
         "user": user,
@@ -694,7 +697,7 @@ def user_profile(request):
 def edit_profile(request):
     """Edit user profile information."""
     user = request.user
-    profile = user.profile
+    profile = ensure_user_profile(user)
 
     if request.method == "POST":
         try:
