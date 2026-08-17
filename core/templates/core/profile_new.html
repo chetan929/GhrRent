@@ -253,6 +253,42 @@
           </div>
         </div>
 
+        <div class="info-section">
+          <h3>Gmail Integration</h3>
+          <div class="info-grid">
+            <div class="info-item">
+              <label>Gmail Status</label>
+              <p>
+                {% if gmail_connected %}
+                  Connected
+                {% else %}
+                  Not Connected
+                {% endif %}
+              </p>
+            </div>
+            <div class="info-item">
+              <label>Connected Account</label>
+              <p>
+                {% if gmail_connected %}
+                  {{ gmail_email }}
+                {% else %}
+                  Not connected
+                {% endif %}
+              </p>
+            </div>
+          </div>
+          <div class="actions" style="margin-top: 16px;">
+            {% if gmail_connected %}
+              <form method="POST" action="{% url 'core:gmail_disconnect' %}" style="display: inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn-edit">Disconnect Gmail</button>
+              </form>
+            {% else %}
+              <a href="{% url 'core:gmail_connect' %}" class="btn-edit">Connect Gmail</a>
+            {% endif %}
+          </div>
+        </div>
+
         {% if profile.bio %}
           <div class="info-section">
             <h3>Bio</h3>

@@ -1,10 +1,19 @@
-from django.contrib.auth import get_user_model
-from django.test import TestCase
-from django.urls import reverse
+import base64
 import json
+from unittest.mock import Mock, patch
+
+from django.contrib.auth import get_user_model
+from django.test import TestCase, override_settings
+from django.urls import reverse
 
 from core.email_service import EmailReminderService
-from core.models import MaintenanceComplaint, Notification, Tenant, UserProfile
+from core.models import (
+    GmailCredential,
+    MaintenanceComplaint,
+    Notification,
+    Tenant,
+    UserProfile,
+)
 
 
 class FreeReminderAndComplaintTests(TestCase):
@@ -154,6 +163,7 @@ class FreeReminderAndComplaintTests(TestCase):
         self.client.force_login(user)
 
         tenant = Tenant.objects.create(
+            user=user,
             name="Alice Tenant",
             phone="9876543210",
             rent=5000,
@@ -214,3 +224,50 @@ class FreeReminderAndComplaintTests(TestCase):
         self.assertEqual(login_response.status_code, 200)
         self.assertTrue(login_response.wsgi_request.user.is_authenticated)
         self.assertRedirects(login_response, reverse("core:dashboard"))
+
+    @override_settings(
+        GOOGLE_CLIENT_ID="test-client-id",
+        GOOGLE_CLIENT_SECRET="test-client-secret",
+        EMAIL_HOST_USER="",
+        EMAIL_HOST_PASSWORD="",
+    )
+    @patch("core.email_service.build")
+    def test_send_email_reminder_uses_connected_gmail_for_user(self, mock_build):
+        user = get_user_model().objects.create_user(
+            username="gmailuser",
+            email="gmailuser@example.com",
+            password="pass123",
+        )
+        GmailCredential.objects.create(
+            user=user,
+            gmail_email="user@gmail.com",
+            access_token="token-123",
+            refresh_token="refresh-123",
+        )
+
+        mock_service = Mock()
+        mock_messages = Mock()
+        mock_messages.send.return_value.execute.return_value = {"id": "abc123"}
+        mock_service.users.return_value.messages.return_value = mock_messages
+        mock_build.return_value = mock_service
+
+        result = EmailReminderService.send_email_reminder(
+            tenant_name="Sam",
+            tenant_email="sam@example.com",
+            rent_amount=5000,
+            pending_amount=1000,
+            language="english",
+            user=user,
+        )
+
+        self.assertTrue(result["success"])
+        self.assertEqual(result["status"], "Sent")
+        mock_build.assert_called_once()
+        mock_messages.send.assert_called_once()
+
+        sent_payload = mock_messages.send.call_args.kwargs["body"]["raw"]
+        decoded = base64.urlsafe_b64decode(sent_payload).decode(
+            "utf-8", errors="ignore"
+        )
+        self.assertIn("sam@example.com", decoded)
+        self.assertIn("user@gmail.com", decoded)

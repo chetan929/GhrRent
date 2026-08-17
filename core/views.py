@@ -7,8 +7,10 @@ from django.contrib.auth.models import User
 from django.utils import timezone
 from django.db import models
 from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
+from django.views.decorators.http import require_http_methods, require_POST
+from django.conf import settings
 import json
+import logging
 from .models import (
     Tenant,
     Payment,
@@ -16,10 +18,13 @@ from .models import (
     Notification,
     MaintenanceComplaint,
     UserProfile,
+    GmailCredential,
     ensure_user_profile,
 )
 from .forms import TenantForm, PaymentForm
 from .email_service import EmailReminderService
+
+logger = logging.getLogger(__name__)
 
 
 # API Endpoints for JSON requests
@@ -42,6 +47,7 @@ def api_add_tenant(request):
             )
 
         tenant = Tenant.objects.create(
+            user=request.user,
             name=name,
             phone=data.get("phone", "").strip(),
             email=data.get("email", "").strip(),
@@ -70,7 +76,7 @@ def api_add_tenant(request):
 def api_delete_tenant(request, tenant_id):
     """API endpoint to delete a tenant via JSON."""
     try:
-        tenant = get_object_or_404(Tenant, id=tenant_id)
+        tenant = get_object_or_404(Tenant, id=tenant_id, user=request.user)
         tenant.delete()
         return JsonResponse(
             {"success": True, "message": "Tenant deleted successfully!"}
@@ -91,10 +97,11 @@ def api_record_payment(request):
         amount = Decimal(str(data.get("amount", 0)))
         note = data.get("note", "Rent payment").strip()
 
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = get_object_or_404(Tenant, id=tenant_id, user=request.user)
 
         # Create payment record
         payment = Payment.objects.create(
+            user=request.user,
             tenant=tenant,
             amount=amount,
             date=timezone.now(),
@@ -135,9 +142,11 @@ def api_get_payments(request):
     """API endpoint to get payments for a tenant."""
     try:
         tenant_id = request.GET.get("tenant_id")
-        tenant = Tenant.objects.get(id=tenant_id)
+        tenant = get_object_or_404(Tenant, id=tenant_id, user=request.user)
 
-        payments = Payment.objects.filter(tenant=tenant).order_by("-date")
+        payments = Payment.objects.filter(tenant=tenant, user=request.user).order_by(
+            "-date"
+        )
         data = {
             "success": True,
             "tenant": {
@@ -240,14 +249,19 @@ def register_view(request):
             password=password,
         )
 
-        # Send welcome email
-        EmailReminderService.send_welcome_email(user.email, user.username)
+        # Send welcome email only if the SMTP server actually accepts it.
+        email_sent = EmailReminderService.send_welcome_email(user.email, user.username)
 
         # Auto login after registration
         login(request, user)
         messages.success(
             request, f"✅ Account created successfully! Welcome, {user.username}!"
         )
+        if not email_sent:
+            messages.warning(
+                request,
+                "⚠️ Your account was created, but the welcome email could not be sent. Check the SMTP configuration.",
+            )
         return redirect("core:dashboard")
 
     return render(request, "core/register.html")
@@ -264,9 +278,13 @@ def logout_view(request):
 def dashboard(request):
     now = timezone.now()
     profile = ensure_user_profile(request.user)
-    tenants = Tenant.objects.all().order_by("name")
-    notifications = Notification.objects.order_by("-created_at")[:5]
-    maintenance_complaints = MaintenanceComplaint.objects.order_by("-created_at")[:5]
+    tenants = Tenant.objects.filter(user=request.user).order_by("name")
+    notifications = Notification.objects.filter(user=request.user).order_by(
+        "-created_at"
+    )[:5]
+    maintenance_complaints = MaintenanceComplaint.objects.filter(
+        user=request.user
+    ).order_by("-created_at")[:5]
 
     # Stats
     total = tenants.count()
@@ -278,9 +296,11 @@ def dashboard(request):
 
     # Collected amount (current month)
     collected_amount = (
-        Payment.objects.filter(date__month=now.month, date__year=now.year).aggregate(
-            sum=models.Sum("amount")
-        )["sum"]
+        Payment.objects.filter(
+            user=request.user,
+            date__month=now.month,
+            date__year=now.year,
+        ).aggregate(sum=models.Sum("amount"))["sum"]
         or 0
     )
 
@@ -294,10 +314,10 @@ def dashboard(request):
     outstanding_amount = sum(t.total_payable() for t in tenants if not t.paid)
 
     # Recent payments
-    payments = Payment.objects.all().order_by("-date")[:5]
+    payments = Payment.objects.filter(user=request.user).order_by("-date")[:5]
 
     # Reminder logs
-    logs = ReminderLog.objects.all().order_by("-date")[:10]
+    logs = ReminderLog.objects.filter(user=request.user).order_by("-date")[:10]
 
     due_tenants = tenants.filter(paid=False)[:3]
     due_tenants_count = due_tenants.count()
@@ -364,7 +384,9 @@ def add_tenant(request):
     if request.method == "POST":
         form = TenantForm(request.POST)
         if form.is_valid():
-            form.save()
+            tenant = form.save(commit=False)
+            tenant.user = request.user
+            tenant.save()
             messages.success(request, "Tenant added successfully!")
             return redirect("core:dashboard")
         else:
@@ -380,7 +402,7 @@ def record_payment(request):
         method = request.POST.get("method", "Manual")
         note = request.POST.get("note", "")
 
-        tenant = get_object_or_404(Tenant, id=tenant_id)
+        tenant = get_object_or_404(Tenant, id=tenant_id, user=request.user)
 
         # If amount is empty, pay full (rent + pending)
         if not amount:
@@ -390,7 +412,12 @@ def record_payment(request):
 
         # Create payment
         payment = Payment.objects.create(
-            tenant=tenant, amount=amount, method=method, note=note, date=timezone.now()
+            user=request.user,
+            tenant=tenant,
+            amount=amount,
+            method=method,
+            note=note,
+            date=timezone.now(),
         )
 
         # Update tenant net balance to reflect the payment against the total due.
@@ -413,7 +440,7 @@ def record_payment(request):
 
 @login_required(login_url="core:login")
 def send_reminder(request, tenant_id):
-    tenant = get_object_or_404(Tenant, id=tenant_id)
+    tenant = get_object_or_404(Tenant, id=tenant_id, user=request.user)
     language = request.GET.get("language", "english")
     due_date = getattr(tenant, "due_day", None)
     due_date_value = None
@@ -440,9 +467,11 @@ def send_reminder(request, tenant_id):
         pending_amount=float(tenant.pending),
         due_date=due_date_value,
         language=language,
+        user=request.user,
     )
 
     ReminderLog.objects.create(
+        user=request.user,
         tenant=tenant,
         message=f"Manual email reminder queued for {tenant.name} for ₹{tenant.total_payable()}",
         status=result["status"],
@@ -450,6 +479,7 @@ def send_reminder(request, tenant_id):
 
     if result["success"]:
         Notification.objects.create(
+            user=request.user,
             title="Reminder email queued",
             message=f"Reminder email queued for {tenant.name}.",
             category="email",
@@ -457,6 +487,7 @@ def send_reminder(request, tenant_id):
         messages.success(request, f"✅ Email reminder queued for {tenant.name}!")
     else:
         Notification.objects.create(
+            user=request.user,
             title="Reminder skipped",
             message=f"No email address found for {tenant.name}.",
             category="email",
@@ -481,7 +512,7 @@ def send_reminder(request, tenant_id):
 
 @login_required(login_url="core:login")
 def send_auto_reminders(request):
-    due_tenants = Tenant.objects.filter(paid=False)
+    due_tenants = Tenant.objects.filter(user=request.user, paid=False)
     sent_count = 0
     language = request.GET.get("language", "english")
 
@@ -503,9 +534,11 @@ def send_auto_reminders(request):
             pending_amount=float(tenant.pending),
             due_date=due_date_value,
             language=language,
+            user=request.user,
         )
 
         ReminderLog.objects.create(
+            user=request.user,
             tenant=tenant,
             message=f"Auto email reminder queued for {tenant.name} for ₹{tenant.total_payable()}",
             status=result["status"],
@@ -542,7 +575,7 @@ def send_auto_reminders(request):
 
 @login_required(login_url="core:login")
 def send_all_reminders(request):
-    due_tenants = Tenant.objects.filter(paid=False)
+    due_tenants = Tenant.objects.filter(user=request.user, paid=False)
     count = 0
     language = request.GET.get("language", "english")
 
@@ -564,9 +597,11 @@ def send_all_reminders(request):
             pending_amount=float(tenant.pending),
             due_date=due_date_value,
             language=language,
+            user=request.user,
         )
 
         ReminderLog.objects.create(
+            user=request.user,
             tenant=tenant,
             message=f"Bulk email reminder queued for {tenant.name} for ₹{tenant.total_payable()}",
             status=result["status"],
@@ -600,7 +635,7 @@ def send_all_reminders(request):
 
 @login_required(login_url="core:login")
 def send_email_reminder(request, tenant_id):
-    tenant = get_object_or_404(Tenant, id=tenant_id)
+    tenant = get_object_or_404(Tenant, id=tenant_id, user=request.user)
     language = request.GET.get("language", "english")
     due_date_value = None
     if getattr(tenant, "due_day", None) is not None:
@@ -619,16 +654,19 @@ def send_email_reminder(request, tenant_id):
         pending_amount=float(tenant.pending),
         due_date=due_date_value,
         language=language,
+        user=request.user,
     )
 
     ReminderLog.objects.create(
+        user=request.user,
         tenant=tenant,
         message=f"Email reminder queued for {tenant.name} for ₹{tenant.total_payable()}",
         status=result["status"],
     )
 
     if result["success"]:
-        notifications = Notification.objects.create(
+        Notification.objects.create(
+            user=request.user,
             title="Email reminder sent",
             message=f"Reminder email sent to {tenant.name} ({tenant.email or 'no email'}).",
             category="email",
@@ -636,6 +674,7 @@ def send_email_reminder(request, tenant_id):
         messages.success(request, f"✅ Email reminder queued for {tenant.name}!")
     else:
         Notification.objects.create(
+            user=request.user,
             title="Email reminder skipped",
             message=f"No email address found for {tenant.name}.",
             category="email",
@@ -655,14 +694,20 @@ def add_maintenance_complaint(request):
         description = request.POST.get("description", "").strip()
         priority = request.POST.get("priority", "Medium")
 
-        tenant = get_object_or_404(Tenant, id=tenant_id) if tenant_id else None
+        tenant = (
+            get_object_or_404(Tenant, id=tenant_id, user=request.user)
+            if tenant_id
+            else None
+        )
         complaint = MaintenanceComplaint.objects.create(
+            user=request.user,
             tenant=tenant,
             title=title or "General maintenance issue",
             description=description or "No description provided.",
             priority=priority,
         )
         Notification.objects.create(
+            user=request.user,
             title="Maintenance complaint raised",
             message=f"{complaint.title} raised for {tenant.name if tenant else 'property'}.",
             category="maintenance",
@@ -675,13 +720,13 @@ def add_maintenance_complaint(request):
 
 @login_required(login_url="core:login")
 def notifications(request):
-    items = Notification.objects.order_by("-created_at")[:20]
+    items = Notification.objects.filter(user=request.user).order_by("-created_at")[:20]
     return render(request, "core/notifications.html", {"notifications": items})
 
 
 @login_required(login_url="core:login")
 def delete_tenant(request, tenant_id):
-    tenant = get_object_or_404(Tenant, id=tenant_id)
+    tenant = get_object_or_404(Tenant, id=tenant_id, user=request.user)
     tenant.delete()
     messages.success(request, f"Tenant deleted successfully!")
     return redirect("core:dashboard")
@@ -692,10 +737,13 @@ def user_profile(request):
     """Display user profile with their data."""
     user = request.user
     profile = ensure_user_profile(user)
+    gmail_credential = getattr(user, "gmail_credential", None)
 
     context = {
         "user": user,
         "profile": profile,
+        "gmail_connected": bool(gmail_credential),
+        "gmail_email": gmail_credential.gmail_email if gmail_credential else None,
     }
     return render(request, "core/profile_new.html", context)
 
@@ -742,3 +790,246 @@ def edit_profile(request):
         "profile": profile,
     }
     return render(request, "core/edit_profile_new.html", context)
+
+
+@login_required(login_url="core:login")
+def gmail_connect(request):
+    """Begin the Google OAuth flow for a user's Gmail account."""
+    if not settings.GOOGLE_CLIENT_ID or not settings.GOOGLE_CLIENT_SECRET:
+        logger.error(
+            "Gmail OAuth not configured: GOOGLE_CLIENT_ID=%s, GOOGLE_CLIENT_SECRET=%s",
+            bool(settings.GOOGLE_CLIENT_ID),
+            bool(settings.GOOGLE_CLIENT_SECRET),
+        )
+        messages.error(
+            request,
+            "❌ Gmail OAuth is not configured. Please contact support.",
+        )
+        return redirect("core:user_profile")
+
+    try:
+        from google_auth_oauthlib.flow import Flow
+
+        client_config = {
+            "web": {
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": [settings.GOOGLE_REDIRECT_URI],
+            }
+        }
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=[
+                "https://www.googleapis.com/auth/gmail.send",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "openid",
+            ],
+        )
+        flow.redirect_uri = settings.GOOGLE_REDIRECT_URI
+        authorization_url, state = flow.authorization_url(
+            access_type="offline",
+            include_granted_scopes="true",
+            prompt="consent",
+            login_hint=request.user.email,
+        )
+        request.session["gmail_oauth_state"] = state
+        logger.info("Gmail OAuth flow initiated for user %s", request.user.username)
+        return redirect(authorization_url)
+    except Exception as exc:
+        logger.exception(
+            "Gmail connect flow error for user %s: %s",
+            request.user.username,
+            type(exc).__name__,
+        )
+        messages.error(
+            request, "❌ Could not start Gmail connection. Please try again."
+        )
+        return redirect("core:user_profile")
+
+
+@login_required(login_url="core:login")
+def gmail_callback(request):
+    """Handle the OAuth callback and store the connected Gmail account."""
+    state = request.session.get("gmail_oauth_state")
+    if not state or request.GET.get("state") != state:
+        logger.warning("Gmail OAuth state mismatch for user %s", request.user.username)
+        messages.error(
+            request, "❌ Gmail OAuth session is invalid or expired. Please try again."
+        )
+        return redirect("core:user_profile")
+
+    # Check for OAuth errors (user denied permission, etc.)
+    error = request.GET.get("error")
+    if error:
+        if error == "access_denied":
+            logger.info("User %s denied Gmail OAuth permissions", request.user.username)
+            messages.warning(
+                request,
+                "❌ You denied Gmail access. Please grant permission to connect your Gmail account.",
+            )
+        else:
+            logger.warning(
+                "Gmail OAuth error for user %s: %s",
+                request.user.username,
+                error,
+            )
+            messages.error(
+                request, f"❌ Gmail connection failed: {error}. Please try again."
+            )
+        return redirect("core:user_profile")
+
+    try:
+        from google_auth_oauthlib.flow import Flow
+        from googleapiclient.discovery import build
+        from google.oauth2.credentials import Credentials
+
+        client_config = {
+            "web": {
+                "client_id": settings.GOOGLE_CLIENT_ID,
+                "client_secret": settings.GOOGLE_CLIENT_SECRET,
+                "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                "token_uri": "https://oauth2.googleapis.com/token",
+                "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+                "redirect_uris": [settings.GOOGLE_REDIRECT_URI],
+            }
+        }
+        flow = Flow.from_client_config(
+            client_config,
+            scopes=[
+                "https://www.googleapis.com/auth/gmail.send",
+                "https://www.googleapis.com/auth/userinfo.email",
+                "openid",
+            ],
+        )
+        flow.redirect_uri = settings.GOOGLE_REDIRECT_URI
+
+        authorization_code = request.GET.get("code")
+        if not authorization_code:
+            logger.error(
+                "No authorization code received in callback for user %s",
+                request.user.username,
+            )
+            messages.error(
+                request, "❌ No authorization code received. Please try again."
+            )
+            return redirect("core:user_profile")
+
+        flow.fetch_token(code=authorization_code)
+        credentials = flow.credentials
+
+        if not credentials or not credentials.token:
+            logger.error(
+                "No access token obtained after OAuth flow for user %s",
+                request.user.username,
+            )
+            messages.error(
+                request, "❌ Failed to obtain access token. Please try again."
+            )
+            return redirect("core:user_profile")
+
+        oauth_service = build("oauth2", "v2", credentials=credentials)
+        email_info = oauth_service.userinfo().get().execute()
+        gmail_email = email_info.get("email")
+
+        if not gmail_email:
+            logger.error(
+                "Could not retrieve Gmail email address for user %s",
+                request.user.username,
+            )
+            messages.error(
+                request, "❌ Could not retrieve your Gmail email. Please try again."
+            )
+            return redirect("core:user_profile")
+
+        # Preserve existing refresh token if new one is not provided
+        existing_credential = getattr(request.user, "gmail_credential", None)
+        refresh_token = credentials.refresh_token
+
+        if not refresh_token and existing_credential:
+            # Use existing refresh token if Google didn't return a new one
+            refresh_token = existing_credential.refresh_token
+
+        # Store or update the Gmail credential
+        gmail_cred, created = GmailCredential.objects.update_or_create(
+            user=request.user,
+            defaults={
+                "gmail_email": gmail_email,
+                "access_token": credentials.token,
+                "refresh_token": refresh_token,
+                "token_expiry": credentials.expiry,
+            },
+        )
+
+        request.session.pop("gmail_oauth_state", None)
+        action = "connected" if created else "updated"
+        logger.info(
+            "Gmail credential %s for user %s with email %s",
+            action,
+            request.user.username,
+            gmail_email,
+        )
+        messages.success(request, f"✅ Gmail account {action}: {gmail_email}")
+        return redirect("core:user_profile")
+
+    except Exception as exc:
+        error_type = type(exc).__name__
+        logger.exception(
+            "Gmail callback error for user %s [%s]: %s",
+            request.user.username,
+            error_type,
+            str(exc),
+        )
+
+        # Provide specific error messages for common issues
+        if "invalid_grant" in str(exc):
+            messages.error(
+                request,
+                "❌ Authorization code expired or already used. Please try connecting again.",
+            )
+        elif "redirect_uri_mismatch" in str(exc):
+            logger.error(
+                "CRITICAL: Redirect URI mismatch. Configured: %s",
+                settings.GOOGLE_REDIRECT_URI,
+            )
+            messages.error(
+                request,
+                "❌ Redirect URI configuration mismatch. Please contact support.",
+            )
+        else:
+            messages.error(request, "❌ Gmail connection failed. Please try again.")
+
+        return redirect("core:user_profile")
+
+
+@login_required(login_url="core:login")
+@require_POST
+def gmail_disconnect(request):
+    """Remove the user's Gmail OAuth connection via POST only."""
+    try:
+        gmail_credential = GmailCredential.objects.get(user=request.user)
+        gmail_email = gmail_credential.gmail_email
+        gmail_credential.delete()
+        logger.info(
+            "Gmail credential disconnected for user %s (email: %s)",
+            request.user.username,
+            gmail_email,
+        )
+        messages.success(request, "✅ Gmail connection removed successfully.")
+    except GmailCredential.DoesNotExist:
+        logger.info(
+            "Disconnect attempt for user %s with no active Gmail credential",
+            request.user.username,
+        )
+        messages.info(request, "ℹ️ No Gmail connection was active for this account.")
+    except Exception as exc:
+        logger.exception(
+            "Error disconnecting Gmail for user %s: %s",
+            request.user.username,
+            str(exc),
+        )
+        messages.error(request, "❌ Error removing Gmail connection. Please try again.")
+
+    return redirect("core:user_profile")

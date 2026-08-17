@@ -11,6 +11,9 @@ urlpatterns = [
     # User profile
     path("profile/", views.user_profile, name="user_profile"),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
+    path("gmail/connect/", views.gmail_connect, name="gmail_connect"),
+    path("gmail/callback/", views.gmail_callback, name="gmail_callback"),
+    path("gmail/disconnect/", views.gmail_disconnect, name="gmail_disconnect"),
     # API Endpoints (JSON)
     path("api/tenants/add/", views.api_add_tenant, name="api_add_tenant"),
     path(

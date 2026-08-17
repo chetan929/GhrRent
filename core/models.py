@@ -8,6 +8,13 @@ from django.dispatch import receiver
 
 
 class Tenant(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="tenants",
+        null=True,
+        blank=True,
+    )
     name = models.CharField(max_length=100)
     phone = models.CharField(max_length=15, blank=True, null=True)
     email = models.EmailField(max_length=200, blank=True, null=True)
@@ -26,6 +33,13 @@ class Tenant(models.Model):
 
 
 class Payment(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="payments",
+        null=True,
+        blank=True,
+    )
     tenant = models.ForeignKey(
         Tenant, on_delete=models.CASCADE, related_name="payments"
     )
@@ -39,6 +53,13 @@ class Payment(models.Model):
 
 
 class ReminderLog(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="reminder_logs",
+        null=True,
+        blank=True,
+    )
     tenant = models.ForeignKey(
         Tenant,
         on_delete=models.SET_NULL,
@@ -58,6 +79,13 @@ class ReminderLog(models.Model):
 
 
 class Notification(models.Model):
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="notifications",
+        null=True,
+        blank=True,
+    )
     title = models.CharField(max_length=200)
     message = models.TextField()
     category = models.CharField(max_length=50, default="general")
@@ -80,6 +108,13 @@ class MaintenanceComplaint(models.Model):
         ("High", "High"),
     ]
 
+    user = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name="maintenance_complaints",
+        null=True,
+        blank=True,
+    )
     tenant = models.ForeignKey(Tenant, on_delete=models.SET_NULL, null=True, blank=True)
     title = models.CharField(max_length=200)
     description = models.TextField()
@@ -91,6 +126,25 @@ class MaintenanceComplaint(models.Model):
 
     def __str__(self):
         return f"{self.title} - {self.status}"
+
+
+class GmailCredential(models.Model):
+    """Stores a user's Gmail OAuth credentials for sending reminders."""
+
+    user = models.OneToOneField(
+        User,
+        on_delete=models.CASCADE,
+        related_name="gmail_credential",
+    )
+    gmail_email = models.EmailField()
+    access_token = models.TextField()
+    refresh_token = models.TextField(blank=True, null=True)
+    token_expiry = models.DateTimeField(null=True, blank=True)
+    connected_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.user.username} -> {self.gmail_email}"
 
 
 class UserProfile(models.Model):

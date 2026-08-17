@@ -14,20 +14,20 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY
 # ==================================================
 
-SECRET_KEY = config(
-    "SECRET_KEY",
-    default="django-insecure-change-this-in-production"
-)
+SECRET_KEY = config("SECRET_KEY", default="django-insecure-change-this-in-production")
 
-# TEMPORARY: Login error dekhne ke liye
-DEBUG = True
+DEBUG = config("DEBUG", default=False, cast=bool)
 
 
 # ==================================================
 # HOSTS
 # ==================================================
 
-ALLOWED_HOSTS = ["*"]
+ALLOWED_HOSTS = [
+    "ghrrent.onrender.com",
+    "localhost",
+    "127.0.0.1",
+]
 
 
 # ==================================================
@@ -160,36 +160,27 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
-EMAIL_HOST = config(
-    "EMAIL_HOST",
-    default="smtp.gmail.com"
-)
+EMAIL_HOST = config("EMAIL_HOST", default="smtp.gmail.com")
 
-EMAIL_PORT = config(
-    "EMAIL_PORT",
-    default=587,
-    cast=int
-)
+EMAIL_PORT = config("EMAIL_PORT", default=587, cast=int)
 
-EMAIL_USE_TLS = config(
-    "EMAIL_USE_TLS",
-    default=True,
-    cast=bool
-)
+EMAIL_USE_TLS = config("EMAIL_USE_TLS", default=True, cast=bool)
 
-EMAIL_HOST_USER = config(
-    "EMAIL_HOST_USER",
-    default=""
-)
+EMAIL_HOST_USER = config("EMAIL_HOST_USER", default="")
 
-EMAIL_HOST_PASSWORD = config(
-    "EMAIL_HOST_PASSWORD",
-    default=""
-)
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD", default="")
 
-DEFAULT_FROM_EMAIL = config(
-    "DEFAULT_FROM_EMAIL",
-    default="noreply@gharrent.com"
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL", default="noreply@gharrent.com")
+
+GOOGLE_CLIENT_ID = config("GOOGLE_CLIENT_ID", default="")
+
+GOOGLE_CLIENT_SECRET = config("GOOGLE_CLIENT_SECRET", default="")
+
+# Production: Set GOOGLE_REDIRECT_URI in environment (e.g., https://ghrrent.onrender.com/gmail/callback/)
+# Development: Defaults to http://127.0.0.1:8000/gmail/callback/
+GOOGLE_REDIRECT_URI = config(
+    "GOOGLE_REDIRECT_URI",
+    default="http://127.0.0.1:8000/gmail/callback/",
 )
 
 
@@ -209,10 +200,17 @@ LOGOUT_REDIRECT_URL = "core:login"
 # ==================================================
 
 CSRF_TRUSTED_ORIGINS = [
-    "http://localhost",
-    "http://127.0.0.1",
     "https://ghrrent.onrender.com",
 ]
+
+# Support local development
+if DEBUG:
+    CSRF_TRUSTED_ORIGINS.extend(
+        [
+            "http://localhost",
+            "http://127.0.0.1",
+        ]
+    )
 
 
 # ==================================================
@@ -226,3 +224,17 @@ MESSAGE_TAGS = {
     messages.WARNING: "warning",
     messages.ERROR: "error",
 }
+
+
+# ==================================================
+# SECURITY - HTTPS/SSL (for Render)
+# ==================================================
+
+# Render automatically sets X-Forwarded-Proto header
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# In production, enforce HTTPS
+if not DEBUG:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = False  # Render handles redirects at the platform level

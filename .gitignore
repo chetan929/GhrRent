@@ -11,6 +11,10 @@ env/
 # Environment variables
 .env
 
+# Google OAuth Secrets (NEVER commit these)
+client_secret*.json
+*.secret.json
+
 # Django
 staticfiles/
 
