@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
@@ -46,15 +46,33 @@ def api_add_tenant(request):
                 {"success": False, "message": "Name is required"}, status=400
             )
 
+        try:
+            rent = Tenant.validate_money_value(data.get("rent", "0"), "rent")
+            pending = Tenant.validate_money_value(
+                (
+                    data.get("pending", "0")
+                    if data.get("pending") not in (None, "")
+                    else "0"
+                ),
+                "pending",
+            )
+            due_day = int(data.get("due_day", 1))
+            if not 1 <= due_day <= 31:
+                raise ValueError("Due day must be between 1 and 31.")
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            return JsonResponse({"success": False, "message": str(exc)}, status=400)
+        except Exception as exc:
+            return JsonResponse({"success": False, "message": str(exc)}, status=400)
+
         tenant = Tenant.objects.create(
             user=request.user,
             name=name,
             phone=data.get("phone", "").strip(),
             email=data.get("email", "").strip(),
             property=data.get("property", "").strip(),
-            rent=float(data.get("rent", 0)),
-            pending=float(data.get("pending", 0)),
-            due_day=int(data.get("due_day", 1)),
+            rent=rent,
+            pending=pending,
+            due_day=due_day,
         )
 
         return JsonResponse(
@@ -278,7 +296,7 @@ def logout_view(request):
 def dashboard(request):
     now = timezone.now()
     profile = ensure_user_profile(request.user)
-    tenants = Tenant.objects.filter(user=request.user).order_by("name")
+    tenants = Tenant.get_safe_tenants_for_user(request.user)
     notifications = Notification.objects.filter(user=request.user).order_by(
         "-created_at"
     )[:5]
@@ -287,12 +305,14 @@ def dashboard(request):
     ).order_by("-created_at")[:5]
 
     # Stats
-    total = tenants.count()
+    total = len(tenants)
 
     # Paid this month
-    paid_this_month = tenants.filter(
-        paid=True, paid_month=now.strftime("%Y-%m")
-    ).count()
+    paid_this_month = sum(
+        1
+        for tenant in tenants
+        if tenant.paid and tenant.paid_month == now.strftime("%Y-%m")
+    )
 
     # Collected amount (current month)
     collected_amount = (
@@ -305,13 +325,46 @@ def dashboard(request):
     )
 
     # Pending count & amount
-    pending_tenants = tenants.filter(paid=False)
-    pending = pending_tenants.count()
-    pending_amount = sum(t.total_payable() for t in pending_tenants)
+    pending_tenants = [tenant for tenant in tenants if not tenant.paid]
+    pending = len(pending_tenants)
+    pending_amount = Decimal("0.00")
+    invalid_money_records = []
+    for tenant in pending_tenants:
+        try:
+            pending_amount += tenant.total_payable()
+        except Exception as exc:
+            logger.warning(
+                "Skipping invalid money values for tenant %s (id=%s): %s",
+                tenant.name,
+                tenant.pk,
+                exc,
+            )
+            invalid_money_records.append(tenant)
 
     # Overdue
-    overdue = tenants.filter(paid=False, due_day__lt=now.day).count()
-    outstanding_amount = sum(t.total_payable() for t in tenants if not t.paid)
+    overdue = sum(
+        1 for tenant in tenants if not tenant.paid and tenant.due_day < now.day
+    )
+    outstanding_amount = Decimal("0.00")
+    for tenant in tenants:
+        if tenant.paid:
+            continue
+        try:
+            outstanding_amount += tenant.total_payable()
+        except Exception as exc:
+            logger.warning(
+                "Skipping invalid outstanding amount for tenant %s (id=%s): %s",
+                tenant.name,
+                tenant.pk,
+                exc,
+            )
+            invalid_money_records.append(tenant)
+
+    if invalid_money_records:
+        logger.warning(
+            "Dashboard encountered %s tenant record(s) with invalid money values.",
+            len(invalid_money_records),
+        )
 
     # Recent payments
     payments = Payment.objects.filter(user=request.user).order_by("-date")[:5]
@@ -319,8 +372,8 @@ def dashboard(request):
     # Reminder logs
     logs = ReminderLog.objects.filter(user=request.user).order_by("-date")[:10]
 
-    due_tenants = tenants.filter(paid=False)[:3]
-    due_tenants_count = due_tenants.count()
+    due_tenants = [tenant for tenant in tenants if not tenant.paid][:3]
+    due_tenants_count = len(due_tenants)
 
     # Format tenants data for JSON injection into template
     tenants_json_data = []
@@ -512,7 +565,11 @@ def send_reminder(request, tenant_id):
 
 @login_required(login_url="core:login")
 def send_auto_reminders(request):
-    due_tenants = Tenant.objects.filter(user=request.user, paid=False)
+    due_tenants = [
+        tenant
+        for tenant in Tenant.get_safe_tenants_for_user(request.user)
+        if not tenant.paid
+    ]
     sent_count = 0
     language = request.GET.get("language", "english")
 
@@ -575,7 +632,11 @@ def send_auto_reminders(request):
 
 @login_required(login_url="core:login")
 def send_all_reminders(request):
-    due_tenants = Tenant.objects.filter(user=request.user, paid=False)
+    due_tenants = [
+        tenant
+        for tenant in Tenant.get_safe_tenants_for_user(request.user)
+        if not tenant.paid
+    ]
     count = 0
     language = request.GET.get("language", "english")
 

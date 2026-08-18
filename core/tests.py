@@ -3,10 +3,12 @@ import json
 from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
+from django.db import connection
 from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from core.email_service import EmailReminderService
+from core.forms import TenantForm
 from core.models import (
     GmailCredential,
     MaintenanceComplaint,
@@ -178,6 +180,55 @@ class FreeReminderAndComplaintTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertFalse(Tenant.objects.filter(id=tenant.id).exists())
+
+    def test_tenant_form_rejects_negative_and_too_large_rent(self):
+        form = {
+            "name": "Bad Rent Tenant",
+            "email": "bad@example.com",
+            "rent": "-1",
+            "pending": "0",
+            "due_day": 10,
+        }
+        tenant_form = TenantForm(data=form)
+        self.assertFalse(tenant_form.is_valid())
+        self.assertIn("rent", tenant_form.errors)
+
+        form["rent"] = "1000000000"
+        tenant_form = TenantForm(data=form)
+        self.assertFalse(tenant_form.is_valid())
+        self.assertIn("rent", tenant_form.errors)
+
+    def test_dashboard_handles_invalid_legacy_tenant_record(self):
+        user = get_user_model().objects.create_user(
+            username="legacybadtenant",
+            email="legacy@example.com",
+            password="pass123",
+        )
+        self.client.force_login(user)
+
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO core_tenant (user_id, name, email, phone, property, rent, pending, due_day, paid, paid_month)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                [
+                    user.id,
+                    "Legacy bad tenant",
+                    "legacy@example.com",
+                    "",
+                    "",
+                    "1000000000",
+                    "0",
+                    5,
+                    False,
+                    None,
+                ],
+            )
+
+        response = self.client.get(reverse("core:dashboard"))
+
+        self.assertEqual(response.status_code, 200)
 
     def test_dashboard_handles_missing_user_profile(self):
         user = get_user_model().objects.create_user(

@@ -4,10 +4,14 @@ Django settings for gharrent project.
 
 from pathlib import Path
 from decouple import config
+from dotenv import load_dotenv
 from django.contrib.messages import constants as messages
 
 # Build paths
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# Load environment variables from the project .env file before reading config values
+load_dotenv(BASE_DIR / ".env")
 
 
 # ==================================================
